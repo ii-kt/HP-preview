@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="ひよりカフェ OGP画像">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fffaf0" />
+      <stop offset="0.55" stop-color="#fffdf8" />
+      <stop offset="1" stop-color="#e3eadb" />
+    </linearGradient>
+    <linearGradient id="counter" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8cda7" />
+      <stop offset="1" stop-color="#c99868" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <circle cx="1020" cy="125" r="62" fill="#f4bc67" opacity="0.9" />
+  <circle cx="1020" cy="125" r="95" fill="#f4bc67" opacity="0.14" />
+  <rect x="660" y="110" width="390" height="270" rx="16" fill="#dfecef" stroke="#fffdf8" stroke-width="24" />
+  <path d="M855 110v270M660 245h390" stroke="#fffdf8" stroke-width="18" />
+  <rect x="610" y="410" width="520" height="90" rx="12" fill="url(#counter)" />
+  <ellipse cx="795" cy="410" rx="96" ry="16" fill="#724a31" opacity="0.16" />
+  <path d="M735 334h118v62c0 42-25 70-59 70s-59-28-59-70v-62Z" fill="#fffdf8" />
+  <path d="M853 360h40c24 0 38 15 38 37s-14 37-38 37h-40" fill="none" stroke="#fffdf8" stroke-width="20" />
+  <rect x="190" y="188" width="12" height="254" rx="6" fill="#748567" />
+  <path d="M196 228c-56-36-93-19-118 32 56 34 93 20 118-32Z" fill="#748567" opacity="0.85" />
+  <path d="M196 287c-51-23-86-6-104 43 53 22 87 5 104-43Z" fill="#748567" opacity="0.7" />
+  <text x="230" y="250" fill="#503525" font-family="Georgia, serif" font-size="92" font-weight="500">ひよりカフェ</text>
+  <text x="234" y="316" fill="#724a31" font-family="Arial, sans-serif" font-size="34" font-weight="700">静岡県浜松市の小さなカフェ</text>
+  <text x="234" y="372" fill="#6f695f" font-family="Arial, sans-serif" font-size="28">焼きたてのおやつと、ほっと落ち着く珈琲を。</text>
+  <rect x="234" y="424" width="260" height="58" rx="8" fill="#503525" />
+  <text x="284" y="462" fill="#fffaf0" font-family="Arial, sans-serif" font-size="24" font-weight="700">店舗案内ページ</text>
+</svg>

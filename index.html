@@ -3,176 +3,483 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#fffaf0" />
     <meta
       name="description"
-      content="静岡県浜松市の架空カフェ「ひよりカフェ」のスマホ向け店舗案内ページサンプルです。"
+      content="静岡県浜松市の架空店舗「ひよりカフェ」のスマホ向け店舗案内ページ制作サンプルです。個人店の公式案内ページとして使いやすい構成を想定しています。"
     />
-    <title>ひよりカフェ | スマホ向け店舗案内ページサンプル</title>
+    <link rel="canonical" href="https://ii-kt.github.io/HP-preview/" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+
+    <meta property="og:locale" content="ja_JP" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ひよりカフェ" />
+    <meta property="og:title" content="ひよりカフェ | 静岡県浜松市の小さなカフェ" />
+    <meta
+      property="og:description"
+      content="焼きたてのおやつと珈琲で、静かな午後を過ごせる架空カフェの店舗案内ページサンプルです。"
+    />
+    <meta property="og:url" content="https://ii-kt.github.io/HP-preview/" />
+    <meta property="og:image" content="https://ii-kt.github.io/HP-preview/og-image.svg" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ひよりカフェ | 静岡県浜松市の小さなカフェ" />
+    <meta
+      name="twitter:description"
+      content="スマホで見やすい個人店向け1ページ店舗案内ページの制作サンプルです。"
+    />
+    <meta name="twitter:image" content="https://ii-kt.github.io/HP-preview/og-image.svg" />
+
+    <title>ひよりカフェ | 静岡県浜松市の小さなカフェ</title>
     <link rel="stylesheet" href="styles.css" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "CafeOrCoffeeShop",
+        "name": "ひよりカフェ",
+        "description": "静岡県浜松市にある架空の個人経営カフェ。焼き菓子、珈琲、軽めのランチを楽しめる店舗案内ページ制作サンプルです。",
+        "url": "https://ii-kt.github.io/HP-preview/",
+        "telephone": "+81-53-000-8731",
+        "email": "hello@hiyori-cafe.example",
+        "priceRange": "¥¥",
+        "servesCuisine": ["カフェ", "コーヒー", "焼き菓子", "ランチ"],
+        "address": {
+          "@type": "PostalAddress",
+          "addressRegion": "静岡県",
+          "addressLocality": "浜松市",
+          "addressCountry": "JP"
+        },
+        "sameAs": ["https://www.instagram.com/hiyori_cafe_sample/"],
+        "openingHoursSpecification": [
+          {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": ["Monday", "Tuesday", "Thursday", "Friday"],
+            "opens": "10:00",
+            "closes": "18:00"
+          },
+          {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": ["Saturday", "Sunday"],
+            "opens": "10:00",
+            "closes": "17:00"
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
-    <div class="site-shell">
-      <header class="hero" id="top">
-        <nav class="topbar" aria-label="ページ内ナビゲーション">
-          <a class="brand" href="#top" aria-label="ひよりカフェ トップへ">
-            <span class="brand-mark" aria-hidden="true">日</span>
-            <span>ひよりカフェ</span>
-          </a>
-          <a class="nav-link" href="#contact">お問い合わせ</a>
-        </nav>
+    <a class="skip-link" href="#main">本文へ移動</a>
 
-        <div class="hero-grid">
-          <section class="hero-copy" aria-labelledby="hero-title">
-            <p class="eyebrow">Hamamatsu / Small Cafe</p>
-            <h1 id="hero-title">ひよりカフェ</h1>
-            <p class="lead">静かな午後に、焼きたてのおやつと香りのよい珈琲を。</p>
-            <div class="hero-actions" aria-label="主な連絡先">
-              <a class="button button-primary" href="tel:0000000000">予約 / 問い合わせ</a>
-              <a class="button button-secondary" href="https://www.instagram.com/" target="_blank" rel="noreferrer">
-                Instagram
-              </a>
-            </div>
-          </section>
+    <header class="site-header" id="top">
+      <nav class="header-nav container" aria-label="ページ内ナビゲーション">
+        <a class="site-logo" href="#top" aria-label="ひよりカフェ トップへ">
+          <span class="logo-mark" aria-hidden="true">H</span>
+          <span>
+            <span class="logo-name">ひよりカフェ</span>
+            <span class="logo-place">Hamamatsu</span>
+          </span>
+        </a>
 
-          <section class="visual-card" aria-label="カフェの雰囲気を表したイメージ">
-            <div class="window-scene" aria-hidden="true">
-              <span class="sun"></span>
-              <span class="steam steam-1"></span>
-              <span class="steam steam-2"></span>
-              <span class="cup"></span>
-              <span class="saucer"></span>
-              <span class="plate"></span>
-              <span class="cake"></span>
-              <span class="plant plant-left"></span>
-              <span class="plant plant-right"></span>
-            </div>
-          </section>
+        <div class="header-links" aria-label="主要セクション">
+          <a href="#menu">メニュー</a>
+          <a href="#access">アクセス</a>
+          <a href="#contact">問い合わせ</a>
         </div>
-      </header>
+      </nav>
 
-      <main>
-        <section class="section intro-section" aria-labelledby="about-title">
+      <!-- Hero -->
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-scene" aria-hidden="true">
+          <span class="scene-window"></span>
+          <span class="scene-curtain scene-curtain-left"></span>
+          <span class="scene-curtain scene-curtain-right"></span>
+          <span class="scene-sun"></span>
+          <span class="scene-counter"></span>
+          <span class="scene-cup scene-cup-main"></span>
+          <span class="scene-cup scene-cup-sub"></span>
+          <span class="scene-plate"></span>
+          <span class="scene-cake"></span>
+          <span class="scene-plant scene-plant-left"></span>
+          <span class="scene-plant scene-plant-right"></span>
+        </div>
+
+        <div class="hero-content container">
+          <p class="eyebrow">Sample cafe website / Shizuoka Hamamatsu</p>
+          <h1 id="hero-title">ひよりカフェ</h1>
+          <p class="hero-catch">焼きたてのおやつと、ほっと落ち着く珈琲を。</p>
+          <p class="hero-lead">
+            浜松市の小さな通り沿いにある、ひとりでも立ち寄りやすい架空のカフェです。
+            季節の焼き菓子と軽めのランチを、ゆっくり過ごせる席でご用意しています。
+          </p>
+
+          <div class="hero-actions" aria-label="主な連絡先">
+            <a class="button button-primary" href="#contact">予約・問い合わせ</a>
+            <a
+              class="button button-secondary"
+              href="https://www.instagram.com/hiyori_cafe_sample/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Instagramを見る
+            </a>
+          </div>
+
+          <dl class="hero-summary" aria-label="店舗概要">
+            <div>
+              <dt>営業時間</dt>
+              <dd>平日 10:00〜18:00 / 土日 10:00〜17:00</dd>
+            </div>
+            <div>
+              <dt>所在地</dt>
+              <dd>静岡県浜松市・小さな通り沿い</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+    </header>
+
+    <main id="main">
+      <!-- About -->
+      <section class="section about-section" id="about" aria-labelledby="about-title">
+        <div class="container section-grid">
           <div class="section-heading">
             <p class="section-kicker">About</p>
-            <h2 id="about-title">お店について</h2>
+            <h2 id="about-title">日常の途中に、少しだけ余白を。</h2>
           </div>
-          <p class="section-text">
-            浜松市の小さな通り沿いにある、ひとりでも立ち寄りやすいカフェです。
-            季節の焼き菓子と、ゆっくり飲めるブレンド珈琲をご用意しています。
-          </p>
-        </section>
+          <div class="section-body">
+            <p>
+              ひよりカフェは、珈琲と焼き菓子、軽めのランチを楽しめる個人経営のカフェです。
+              仕事の合間にひと息つきたい方、ひとりで本を読みたい方、友人とゆっくり話したい方に向けて、
+              肩の力を抜いて過ごせる時間を大切にしています。
+            </p>
+            <p>
+              店主が少量ずつ焼くおやつは、甘さを控えめにして珈琲と合わせやすく。
+              大きな看板よりも、また来たくなる居心地を大切にする、そんなお店を想定したサンプルページです。
+            </p>
+          </div>
+        </div>
+      </section>
 
-        <section class="section" aria-labelledby="menu-title">
-          <div class="section-heading">
+      <!-- Reasons -->
+      <section class="section reason-section" aria-labelledby="reason-title">
+        <div class="container">
+          <div class="section-heading compact-heading">
+            <p class="section-kicker">Why visit</p>
+            <h2 id="reason-title">選ばれる理由</h2>
+          </div>
+
+          <div class="reason-list">
+            <article class="reason-card">
+              <span class="reason-number" aria-hidden="true">01</span>
+              <h3>ひとりでも入りやすい席</h3>
+              <p>窓際のカウンター席や小さなテーブル席を想定。短時間の休憩にも、ゆっくり過ごす日にも使いやすい雰囲気です。</p>
+            </article>
+            <article class="reason-card">
+              <span class="reason-number" aria-hidden="true">02</span>
+              <h3>季節で変わる焼き菓子</h3>
+              <p>チーズケーキやスコーンなど、日々の発信につなげやすいメニューを掲載。Instagramとの相性も良い構成です。</p>
+            </article>
+            <article class="reason-card">
+              <span class="reason-number" aria-hidden="true">03</span>
+              <h3>来店前に知りたい情報を整理</h3>
+              <p>営業時間、混みやすい時間、支払い方法、駐車場など、初めての方が迷いにくい情報を1ページにまとめています。</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- Menu -->
+      <section class="section menu-section" id="menu" aria-labelledby="menu-title">
+        <div class="container">
+          <div class="section-heading compact-heading">
             <p class="section-kicker">Menu</p>
             <h2 id="menu-title">メニュー</h2>
+            <p class="section-note">価格はサンプルです。実店舗向けには内容・価格・表記を差し替えます。</p>
           </div>
-          <div class="menu-list">
-            <article class="menu-item">
-              <div>
-                <h3>ひよりブレンド</h3>
-                <p>すっきり飲みやすい定番の珈琲</p>
-              </div>
-              <span>¥520</span>
-            </article>
-            <article class="menu-item">
-              <div>
-                <h3>季節のチーズケーキ</h3>
-                <p>日替わりの果物を添えて</p>
-              </div>
-              <span>¥680</span>
-            </article>
-            <article class="menu-item">
-              <div>
-                <h3>ランチプレート</h3>
-                <p>野菜を使った軽めのお昼ごはん</p>
-              </div>
-              <span>¥1,180</span>
-            </article>
-          </div>
-        </section>
 
-        <section class="section schedule-section" aria-labelledby="hours-title">
+          <div class="menu-groups">
+            <article class="menu-group">
+              <div class="menu-group-heading">
+                <span class="menu-category">Drink</span>
+                <h3>ドリンク</h3>
+              </div>
+              <ul class="menu-items">
+                <li>
+                  <span>
+                    <strong>ひよりブレンド</strong>
+                    <small>浅煎り寄りのやさしい珈琲</small>
+                  </span>
+                  <b>¥520</b>
+                </li>
+                <li>
+                  <span>
+                    <strong>カフェラテ</strong>
+                    <small>ミルク感のある定番ラテ</small>
+                  </span>
+                  <b>¥590</b>
+                </li>
+                <li>
+                  <span>
+                    <strong>季節のハーブティー</strong>
+                    <small>ノンカフェインも用意</small>
+                  </span>
+                  <b>¥560</b>
+                </li>
+              </ul>
+            </article>
+
+            <article class="menu-group">
+              <div class="menu-group-heading">
+                <span class="menu-category">Sweets</span>
+                <h3>スイーツ</h3>
+              </div>
+              <ul class="menu-items">
+                <li>
+                  <span>
+                    <strong>季節のチーズケーキ</strong>
+                    <small>果物を添えた人気メニュー</small>
+                  </span>
+                  <b>¥680</b>
+                </li>
+                <li>
+                  <span>
+                    <strong>焼きたてスコーン</strong>
+                    <small>自家製ジャム付き</small>
+                  </span>
+                  <b>¥540</b>
+                </li>
+                <li>
+                  <span>
+                    <strong>プリンと珈琲セット</strong>
+                    <small>午後の休憩におすすめ</small>
+                  </span>
+                  <b>¥920</b>
+                </li>
+              </ul>
+            </article>
+
+            <article class="menu-group">
+              <div class="menu-group-heading">
+                <span class="menu-category">Lunch</span>
+                <h3>ランチ</h3>
+              </div>
+              <ul class="menu-items">
+                <li>
+                  <span>
+                    <strong>週替わりランチプレート</strong>
+                    <small>野菜多めの軽いお昼ごはん</small>
+                  </span>
+                  <b>¥1,280</b>
+                </li>
+                <li>
+                  <span>
+                    <strong>クロックムッシュ</strong>
+                    <small>サラダとミニスープ付き</small>
+                  </span>
+                  <b>¥1,050</b>
+                </li>
+                <li>
+                  <span>
+                    <strong>焼き菓子テイクアウト</strong>
+                    <small>手土産にも使いやすい小袋</small>
+                  </span>
+                  <b>¥360〜</b>
+                </li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- Visit guide -->
+      <section class="section visit-section" aria-labelledby="visit-title">
+        <div class="container split-layout">
+          <div>
+            <div class="section-heading compact-heading">
+              <p class="section-kicker">First visit</p>
+              <h2 id="visit-title">初めての方へ</h2>
+            </div>
+            <p class="section-text">
+              来店前に知りたいことを短く整理しておくと、Instagramだけでは伝わりにくい安心感を補えます。
+              実店舗向けには、運用に合わせて内容を調整します。
+            </p>
+          </div>
+
+          <dl class="guide-list">
+            <div>
+              <dt>予約</dt>
+              <dd>席数が少ないため、ランチ利用は事前連絡がおすすめです。</dd>
+            </div>
+            <div>
+              <dt>混みやすい時間</dt>
+              <dd>土日 12:00〜14:00、平日 15:00前後は混み合う場合があります。</dd>
+            </div>
+            <div>
+              <dt>支払い方法</dt>
+              <dd>現金・主要キャッシュレス決済に対応予定の表記例です。</dd>
+            </div>
+            <div>
+              <dt>利用シーン</dt>
+              <dd>ひとり利用、子連れ、テイクアウトの可否を分かりやすく掲載できます。</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- Hours -->
+      <section class="section hours-section" aria-labelledby="hours-title">
+        <div class="container section-grid">
           <div class="section-heading">
             <p class="section-kicker">Hours</p>
             <h2 id="hours-title">営業時間</h2>
           </div>
-          <dl class="hours-list">
-            <div>
-              <dt>平日</dt>
-              <dd>10:00〜18:00</dd>
-            </div>
-            <div>
-              <dt>土日</dt>
-              <dd>10:00〜17:00</dd>
-            </div>
-            <div>
-              <dt>定休日</dt>
-              <dd>水曜</dd>
-            </div>
-          </dl>
-        </section>
-
-        <section class="section access-section" aria-labelledby="access-title">
-          <div class="section-heading">
-            <p class="section-kicker">Access</p>
-            <h2 id="access-title">アクセス</h2>
+          <div class="hours-panel">
+            <dl class="hours-list">
+              <div>
+                <dt>平日</dt>
+                <dd>10:00〜18:00 <small>ラストオーダー 17:30</small></dd>
+              </div>
+              <div>
+                <dt>土日</dt>
+                <dd>10:00〜17:00 <small>ラストオーダー 16:30</small></dd>
+              </div>
+              <div>
+                <dt>定休日</dt>
+                <dd>水曜 <small>臨時休業はInstagramでお知らせ</small></dd>
+              </div>
+            </dl>
           </div>
-          <div class="access-panel">
-            <div class="map-visual" aria-hidden="true">
-              <span class="map-road map-road-main"></span>
-              <span class="map-road map-road-sub"></span>
-              <span class="map-pin"></span>
+        </div>
+      </section>
+
+      <!-- Access -->
+      <section class="section access-section" id="access" aria-labelledby="access-title">
+        <div class="container split-layout access-layout">
+          <div class="map-visual" aria-label="店舗周辺の簡易地図イメージ" role="img">
+            <span class="map-road map-road-main" aria-hidden="true"></span>
+            <span class="map-road map-road-sub" aria-hidden="true"></span>
+            <span class="map-block map-block-one" aria-hidden="true"></span>
+            <span class="map-block map-block-two" aria-hidden="true"></span>
+            <span class="map-pin" aria-hidden="true"></span>
+          </div>
+
+          <div>
+            <div class="section-heading compact-heading">
+              <p class="section-kicker">Access</p>
+              <h2 id="access-title">アクセス</h2>
             </div>
-            <div class="access-copy">
-              <p>静岡県浜松市</p>
-              <a class="button button-outline" href="https://maps.google.com/?q=%E9%9D%99%E5%B2%A1%E7%9C%8C%E6%B5%9C%E6%9D%BE%E5%B8%82" target="_blank" rel="noreferrer">
-                地図を開く
+            <dl class="access-list">
+              <div>
+                <dt>所在地</dt>
+                <dd>静岡県浜松市</dd>
+              </div>
+              <div>
+                <dt>駐車場</dt>
+                <dd>店舗前に2台分、満車時は近隣コインパーキングをご利用ください。</dd>
+              </div>
+              <div>
+                <dt>目印</dt>
+                <dd>浜松駅方面から車で約10分、小さな白い看板が目印です。</dd>
+              </div>
+            </dl>
+            <a
+              class="button button-outline"
+              href="https://maps.google.com/?q=%E9%9D%99%E5%B2%A1%E7%9C%8C%E6%B5%9C%E6%9D%BE%E5%B8%82"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Google Mapを開く
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Contact -->
+      <section class="section contact-section" id="contact" aria-labelledby="contact-title">
+        <div class="container contact-layout">
+          <div>
+            <div class="section-heading compact-heading">
+              <p class="section-kicker">Contact</p>
+              <h2 id="contact-title">お問い合わせ</h2>
+            </div>
+            <p class="section-text">
+              席の確認、ランチの予約、テイクアウトの相談など、来店前に必要な連絡先をまとめています。
+              このデモでは送信体験のみを用意しています。
+            </p>
+
+            <div class="contact-methods" aria-label="連絡方法">
+              <a class="contact-method" href="tel:+81530008731">
+                <span class="method-label" aria-hidden="true">TEL</span>
+                <span>
+                  <strong>053-000-8731</strong>
+                  <small>受付時間 10:00〜17:00</small>
+                </span>
+              </a>
+              <a
+                class="contact-method"
+                href="https://www.instagram.com/hiyori_cafe_sample/"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span class="method-label" aria-hidden="true">IG</span>
+                <span>
+                  <strong>@hiyori_cafe_sample</strong>
+                  <small>営業日のお知らせや焼き菓子の入荷情報</small>
+                </span>
+              </a>
+              <a class="contact-method" href="mailto:hello@hiyori-cafe.example">
+                <span class="method-label" aria-hidden="true">MAIL</span>
+                <span>
+                  <strong>hello@hiyori-cafe.example</strong>
+                  <small>撮影・取材・貸切の相談はこちら</small>
+                </span>
               </a>
             </div>
           </div>
-        </section>
 
-        <section class="section contact-section" id="contact" aria-labelledby="contact-title">
-          <div class="section-heading">
-            <p class="section-kicker">Contact</p>
-            <h2 id="contact-title">お問い合わせ</h2>
-          </div>
-          <div class="contact-list">
-            <a class="contact-row" href="tel:0000000000">
-              <span class="contact-icon" aria-hidden="true">Tel</span>
-              <span>
-                <strong>電話</strong>
-                <small>000-0000-0000</small>
-              </span>
-            </a>
-            <a class="contact-row" href="https://www.instagram.com/" target="_blank" rel="noreferrer">
-              <span class="contact-icon" aria-hidden="true">IG</span>
-              <span>
-                <strong>Instagram</strong>
-                <small>@hiyori_cafe_sample</small>
-              </span>
-            </a>
-            <form class="contact-form" aria-label="お問い合わせフォーム風UI">
-              <label>
-                <span>お名前</span>
-                <input type="text" name="name" placeholder="山田 太郎" autocomplete="name" />
-              </label>
-              <label>
-                <span>メッセージ</span>
-                <textarea name="message" placeholder="来店予約やお問い合わせ内容をご入力ください"></textarea>
-              </label>
-              <button class="button button-primary" type="button" data-demo-submit>送信する</button>
-              <p class="form-note" aria-live="polite" data-form-note>サンプルのため、実際には送信されません。</p>
-            </form>
-          </div>
-        </section>
-      </main>
+          <form class="contact-form" data-demo-form aria-label="お問い合わせフォーム">
+            <div class="form-row">
+              <label for="name">お名前</label>
+              <input id="name" name="name" type="text" placeholder="山田 太郎" autocomplete="name" />
+            </div>
+            <div class="form-row">
+              <label for="contact-kind">ご用件</label>
+              <select id="contact-kind" name="kind">
+                <option value="seat">席の確認</option>
+                <option value="lunch">ランチ予約</option>
+                <option value="takeout">テイクアウト相談</option>
+                <option value="other">その他</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label for="message">メッセージ</label>
+              <textarea id="message" name="message" placeholder="ご希望日時や人数などをご入力ください"></textarea>
+            </div>
+            <button class="button button-primary" type="submit">送信内容を確認</button>
+            <p class="form-note" data-form-note aria-live="polite">
+              制作サンプルのため実際には送信されません。実店舗向けにはメール送信やフォームサービスへ接続できます。
+            </p>
+          </form>
+        </div>
+      </section>
+    </main>
 
-      <footer class="site-footer">
-        <small>Store page sample by KiT Works</small>
-      </footer>
-    </div>
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div>
+          <strong>ひよりカフェ</strong>
+          <p>静岡県浜松市 / 平日 10:00〜18:00 / 定休日 水曜</p>
+        </div>
+        <small>KiT Works 制作サンプル</small>
+      </div>
+    </footer>
+
+    <nav class="mobile-cta" aria-label="スマートフォン用固定CTA">
+      <a href="tel:+81530008731">電話</a>
+      <a class="mobile-cta-primary" href="#contact">予約相談</a>
+      <a href="https://www.instagram.com/hiyori_cafe_sample/" target="_blank" rel="noreferrer">Instagram</a>
+    </nav>
 
     <script src="script.js"></script>
   </body>
