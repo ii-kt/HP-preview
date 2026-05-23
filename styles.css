@@ -172,9 +172,26 @@ svg {
   padding: 28px 0 46px;
 }
 
+.hero::before {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255, 250, 240, 0.98) 0%,
+      rgba(255, 250, 240, 0.94) 43%,
+      rgba(255, 250, 240, 0.34) 66%,
+      transparent 100%
+    );
+  content: "";
+}
+
 .hero::after {
   position: absolute;
   inset: auto 0 0;
+  z-index: 1;
   height: 42%;
   background: linear-gradient(180deg, transparent, rgba(255, 250, 240, 0.96));
   content: "";
@@ -183,6 +200,7 @@ svg {
 .hero-scene {
   position: absolute;
   inset: 0;
+  z-index: 0;
   overflow: hidden;
 }
 
@@ -359,9 +377,14 @@ p {
 
 h1 {
   margin-bottom: 14px;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(2.95rem, 14.5vw, 6.4rem);
-  font-weight: 500;
+  font-family:
+    "Yu Mincho",
+    "Hiragino Mincho ProN",
+    YuMincho,
+    "Noto Serif JP",
+    serif;
+  font-size: clamp(2.95rem, 14.5vw, 5.2rem);
+  font-weight: 600;
   line-height: 0.95;
   letter-spacing: 0;
 }
@@ -370,7 +393,7 @@ h1 {
   width: min(100%, 26rem);
   margin-bottom: 14px;
   color: var(--coffee-dark);
-  font-size: clamp(1.28rem, 5.4vw, 2.1rem);
+  font-size: clamp(1.28rem, 5.4vw, 1.82rem);
   font-weight: 800;
   line-height: 1.42;
 }
@@ -943,12 +966,85 @@ h3 {
   }
 
   .hero {
-    min-height: 680px;
-    padding: 72px 0 72px;
+    min-height: 660px;
+    padding: 70px 0 76px;
   }
 
   .hero-content {
+    max-width: 540px;
     margin-left: max(24px, calc((100vw - var(--container)) / 2));
+    padding-right: 24px;
+  }
+
+  .hero-scene::before {
+    inset: 8% 5% 6% 48%;
+    border-radius: 28px 28px 0 0;
+  }
+
+  .scene-window {
+    right: 7.5%;
+    top: 12%;
+    width: min(330px, 26vw);
+    height: 43%;
+  }
+
+  .scene-curtain {
+    top: 9%;
+    height: 47%;
+  }
+
+  .scene-curtain-left {
+    right: calc(7.5% + min(330px, 26vw) - 16px);
+  }
+
+  .scene-curtain-right {
+    right: calc(7.5% - 28px);
+  }
+
+  .scene-sun {
+    right: 14%;
+    top: 18%;
+  }
+
+  .scene-counter {
+    right: 4%;
+    bottom: 12%;
+    width: min(430px, 34vw);
+    height: 84px;
+  }
+
+  .scene-cup {
+    bottom: calc(12% + 72px);
+  }
+
+  .scene-cup-main {
+    right: 20%;
+  }
+
+  .scene-cup-sub {
+    right: 31%;
+  }
+
+  .scene-plate {
+    right: 23%;
+    bottom: calc(12% + 70px);
+  }
+
+  .scene-cake {
+    right: 25%;
+    bottom: calc(12% + 86px);
+  }
+
+  .scene-plant {
+    bottom: calc(12% + 76px);
+  }
+
+  .scene-plant-left {
+    right: 39%;
+  }
+
+  .scene-plant-right {
+    right: 6%;
   }
 
   .section {
