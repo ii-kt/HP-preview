@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 3,
+  "status": "cross-validated-current-game-data",
+  "gameRuntimeExhaustiveVerification": false,
+  "palCount": 299,
+  "unorderedPairCount": 44850,
+  "compactChildCount": 44850,
+  "resultRowCount": 44851,
+  "genderDependentPairs": [
+    "catmage|foxmage"
+  ],
+  "unsupportedSingleSourceIds": [
+    "blackfurdragon",
+    "candlewitch",
+    "eleclion",
+    "plantslime_flower",
+    "strawhatcat",
+    "volcanicturtle"
+  ],
+  "sourceCommits": {
+    "palcalc": "8b7e2f779e47fddae16ddcb973e828ba20c02b80",
+    "pst": "dbe1f9ea109e9216d2686e728ff1d7f1d70f4857",
+    "paldeck": "073a1b0376e2005fc5cb09226544cf3fbd75eeee",
+    "localization": "f45a48ef25ce08a5311a27e55b17062ba0bb4362",
+    "guide": "6da0952e5aa66a297877a6f711e9ab5b0840bd47"
+  },
+  "checks": {
+    "pstPaldbAgreementExceptGenderPair": true,
+    "palcalcAgreementForCoveredRoster": true,
+    "allChildrenInsideSupportedRoster": true,
+    "sameSpeciesCovered": true,
+    "uniqueCombinationPrecedenceApplied": true,
+    "ignoreCombiAppliedByPstExtraction": true,
+    "displayNamesTrimmed": true,
+    "invalidExternalIconUrlsExcluded": true,
+    "compactMatrixRoundTripValidated": true
+  }
+}
