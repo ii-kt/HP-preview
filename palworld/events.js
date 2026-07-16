@@ -1,5 +1,5 @@
 const HOWTO_BY_TAB={
- parents:["「親Aを選択」を押す","「親Bを選択」を押す","子パルが自動表示される"],
+ parents:["「親Aを選択」を押す","「親Bを選択」を押す","子パルが表示される（性別依存は条件別）"],
  target:["「作りたいパルを選択」を押す","子パルを検索して選ぶ","作れる親の組合せが一覧表示される"],
  offspring:["「基準にする親」を押す","親パルを検索して選ぶ","相手パルと子パルの全候補が表示される"],
  tree:["「起点パルを選択」を押す","起点パルと表示世代数を選ぶ","系譜を移動・拡大して確認する"],
@@ -24,7 +24,14 @@ $("#singleParentPick").onclick=()=>openPicker(p=>{selected.parent=p;renderOffspr
 $("#treePick").onclick=()=>openPicker(p=>{selected.tree=p;treeSelections.clear();renderTree()});
 $("#swapParents").onclick=()=>{[selected.a,selected.b]=[selected.b,selected.a];renderParents()};
 $("#clearParents").onclick=()=>{selected.a=selected.b=null;renderParents()};
-$("#copyParents").onclick=async()=>{const r=getResults(selected.a,selected.b);if(!r.length)return toast("コピーする結果がありません");await navigator.clipboard?.writeText(r.map(x=>`${x.first.jp} + ${x.second.jp} → ${x.child.jp}`).join("\n"));toast("コピーしました")};
+$("#copyParents").onclick=async()=>{
+ const r=getResults(selected.a,selected.b);if(!r.length)return toast("コピーする結果がありません");
+ const text=r.map(x=>{
+  const genderSpecific=x.parent1Gender!=="WILDCARD"||x.parent2Gender!=="WILDCARD";
+  return `${x.first.jp} + ${x.second.jp} → ${x.child.jp}${genderSpecific?`（${x.note}）`:""}`;
+ }).join("\n");
+ await navigator.clipboard?.writeText(text);toast("コピーしました");
+};
 ["targetFilter","targetSort"].forEach(id=>$("#"+id).addEventListener(id.endsWith("Filter")?"input":"change",renderTarget));
 ["offspringFilter","offspringSort"].forEach(id=>$("#"+id).addEventListener(id.endsWith("Filter")?"input":"change",renderOffspring));
 ["dexSearch","dexSort","dexVariant","dexElement","dexWork","dexWorkLevel"].forEach(id=>$("#"+id).addEventListener(id==="dexSearch"?"input":"change",renderDex));
