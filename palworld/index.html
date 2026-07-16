@@ -15,7 +15,7 @@
   <p class="sub">親から子、子から親、全子候補、4世代の配合系譜を日本語で検索できます。ゲームバージョン 1.0対応データ。</p>
  </div>
  <div class="status">
-  <span id="dataStatus" class="badge warn">データ読込中</span>
+  <span id="dataStatus" class="badge warn">確定配合表を読込中</span>
   <span id="palCount" class="badge">0体</span>
   <span id="comboCount" class="badge">0組</span>
  </div>
@@ -36,7 +36,7 @@
 
 <main>
 <section id="view-parents" class="view panel">
- <div class="panel-title"><h2>親を2体選択</h2><small>特殊配合・性別依存を優先</small></div>
+ <div class="panel-title"><h2>親を2体選択</h2><small>ゲームデータ確定表・性別依存対応</small></div>
  <div class="equation">
   <button class="slot" id="parentA"></button><div class="op">＋</div>
   <button class="slot" id="parentB"></button><div class="op">＝</div>
@@ -95,10 +95,10 @@
 </section>
 
 <details class="info-box info">
- <summary>データと計算方法</summary>
- <p>通常配合は、両親の配合値の平均に最も近いパルを返します。同種同士は同種、固有配合は通常計算より優先します。クレメーオ／フォレーナの組合せは親の性別で2通りの結果を表示します。</p>
- <p>起動時に2026年7月時点の公開ゲーム抽出データを取得します。取得に失敗した場合は、上部の「データ取得失敗」を押すと再試行できます。検索・計算はブラウザ内で行い、選択内容は外部へ送信しません。</p>
- <p>パル画像：<a href="https://github.com/tylercamp/palcalc/tree/8b7e2f779e47fddae16ddcb973e828ba20c02b80/PalCalc.UI/Resources/Pals" target="_blank" rel="noreferrer">PalCalc Resources/Pals</a>（MIT License）。</p>
+ <summary>データと検証方法</summary>
+ <p>配合結果は平均値から推測せず、PalCalcがPalworld 1.0のゲームデータから生成した全配合表をそのまま参照します。起動時に288体の全41,616ペアが揃っているか検査し、1組でも欠けている場合は配合結果を表示しません。</p>
+ <p>性別によって結果が変わる組合せは、該当する性別条件と2通りの結果を表示します。検索・並べ替え・ツリー構築はブラウザ内で行い、選択内容は外部へ送信しません。</p>
+ <p>配合表：<a href="https://github.com/tylercamp/palcalc/blob/8b7e2f779e47fddae16ddcb973e828ba20c02b80/PalCalc.Model/breeding.json" target="_blank" rel="noreferrer">PalCalc breeding.json</a>。パル画像：<a href="https://github.com/tylercamp/palcalc/tree/8b7e2f779e47fddae16ddcb973e828ba20c02b80/PalCalc.UI/Resources/Pals" target="_blank" rel="noreferrer">PalCalc Resources/Pals</a>（MIT License）。</p>
 </details>
 </main>
 </div>
@@ -118,7 +118,7 @@
 </div>
 <div id="toast" class="toast"></div>
 
-<script src="data.js?v=20260716-icons1" defer></script>
+<script src="data.js?v=20260716-authoritative1" defer></script>
 <script src="render.js?v=20260716-icons1" defer></script>
 <script src="picker-tree.js?v=20260716-icons1" defer></script>
 <script src="events.js?v=20260716-howto1" defer></script>
