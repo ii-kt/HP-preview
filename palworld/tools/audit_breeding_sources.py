@@ -1,17 +1,9 @@
 #!/usr/bin/env python3
-"""Adversarial audit of Palworld breeding data sources.
+"""Fail-closed, adversarial audit of Palworld breeding sources.
 
-No third-party source is treated as authoritative. The audit resolves the current
-GitHub revision of each implementation, reconstructs its parent-pair table, and
-classifies every pair as unanimous, disputed, or insufficiently evidenced.
-
-Outputs:
-- palworld/audit/source-audit.json: detailed machine-readable findings
-- palworld/audit/consensus.json: only pairs with at least two agreeing sources
-  and no dissenting source
-
-The consensus file is deliberately fail-closed. It is not labelled as an
-official or fully game-verified table.
+The program resolves current revisions of three independent implementations,
+reconstructs their effective parent-pair results, and refuses to call any source
+authoritative. Raw source defects and effective results are audited separately.
 """
 from __future__ import annotations
 
@@ -26,551 +18,352 @@ import urllib.request
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
-AUDIT_DIR = ROOT / "palworld" / "audit"
-REPORT_OUT = AUDIT_DIR / "source-audit.json"
-CONSENSUS_OUT = AUDIT_DIR / "consensus.json"
+OUT_DIR = ROOT / "palworld" / "audit"
+REPORT_PATH = OUT_DIR / "source-audit.json"
+CONSENSUS_PATH = OUT_DIR / "consensus.json"
+TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
+UA = "HP-preview-palworld-audit/4.0"
 
-SOURCE_SPECS = {
-    "palcalc": {
-        "repo": "tylercamp/palcalc",
-        "ref": "HEAD",
-        "files": {
-            "pals": "PalCalc.GenDB/out-csv/pals.csv",
-            "breeding": "PalCalc.Model/breeding.json",
-            "reader": "PalCalc.GenDB/GameDataReaders/PalReader.cs",
-            "calculator": "PalCalc.GenDB/PalBreedingCalculator.cs",
-        },
-    },
-    "pst": {
-        "repo": "deafdudecomputers/PalworldSaveTools",
-        "ref": "HEAD",
-        "files": {
-            "breeding": "resources/game_data/breedingdata.json",
-            "generator": "scripts/scrs/update_game_data.py",
-            "notes": ".opencode/skills/pst-breeding/SKILL.md",
-        },
-    },
-    "paldeck": {
-        "repo": "FearlessKenji/Paldeck",
-        "ref": "HEAD",
-        "files": {
-            "breeding": "data/palBreeding.json",
-            "calculator": "utils/palBreeding.js",
-            "updater": "scripts/update-palworld-breeding-results.js",
-        },
-    },
+SPECS = {
+    "palcalc": ("tylercamp/palcalc", {
+        "pals": "PalCalc.GenDB/out-csv/pals.csv",
+        "breeding": "PalCalc.Model/breeding.json",
+        "reader": "PalCalc.GenDB/GameDataReaders/PalReader.cs",
+        "calculator": "PalCalc.GenDB/PalBreedingCalculator.cs",
+    }),
+    "pst": ("deafdudecomputers/PalworldSaveTools", {
+        "breeding": "resources/game_data/breedingdata.json",
+        "generator": "scripts/scrs/update_game_data.py",
+        "notes": ".opencode/skills/pst-breeding/SKILL.md",
+        "ui": "src/palworld_aio/ui/tabs/breeding_tab.py",
+    }),
+    "paldeck": ("FearlessKenji/Paldeck", {
+        "breeding": "data/palBreeding.json",
+        "calculator": "utils/palBreeding.js",
+        "updater": "scripts/update-palworld-breeding-results.js",
+    }),
 }
 
-USER_AGENT = "HP-preview-palworld-audit/3.0"
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
 
-
-def request_text(url: str, *, accept: str = "text/plain", timeout: int = 180) -> str:
-    headers = {"User-Agent": USER_AGENT, "Accept": accept}
-    if GITHUB_TOKEN and "api.github.com" in url:
-        headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+def get(url: str, *, json_accept: bool = False) -> str:
+    headers = {"User-Agent": UA, "Accept": "application/vnd.github+json" if json_accept else "text/plain"}
+    if TOKEN and "api.github.com" in url:
+        headers["Authorization"] = f"Bearer {TOKEN}"
         headers["X-GitHub-Api-Version"] = "2022-11-28"
-    request = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=180) as response:
         return response.read().decode("utf-8-sig")
 
 
-def request_json(url: str) -> Any:
-    return json.loads(request_text(url, accept="application/vnd.github+json"))
+def get_json(url: str) -> Any:
+    return json.loads(get(url, json_accept=True))
 
 
-def resolve_sha(repo: str, ref: str) -> tuple[str, str]:
-    if ref != "HEAD":
-        payload = request_json(f"https://api.github.com/repos/{repo}/commits/{ref}")
-        return payload["sha"], ref
-    repo_payload = request_json(f"https://api.github.com/repos/{repo}")
-    branch = repo_payload["default_branch"]
-    commit_payload = request_json(f"https://api.github.com/repos/{repo}/commits/{branch}")
-    return commit_payload["sha"], branch
+def resolve(repo: str) -> tuple[str, str]:
+    branch = get_json(f"https://api.github.com/repos/{repo}")["default_branch"]
+    sha = get_json(f"https://api.github.com/repos/{repo}/commits/{branch}")["sha"]
+    return branch, sha
 
 
-def raw_url(repo: str, sha: str, path: str) -> str:
-    return f"https://raw.githubusercontent.com/{repo}/{sha}/{path}"
+def canon(value: Any) -> str:
+    return str(value or "").strip().lower()
 
 
-def sha256_text(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+def pkey(first: Any, second: Any) -> str:
+    return "|".join(sorted((canon(first), canon(second))))
 
 
-def canonical_id(value: Any) -> str:
-    value = str(value or "").strip().lower()
-    aliases = {
-        "blueplatypus": "blueplatypus",
-        "blueplatypus_fire": "blueplatypus_fire",
-    }
-    return aliases.get(value, value)
+def add(table: dict[str, set[str]], first: Any, second: Any, child: Any) -> None:
+    a, b, c = canon(first), canon(second), canon(child)
+    if a and b and c:
+        table.setdefault(pkey(a, b), set()).add(c)
 
 
-def pair_key(first: str, second: str) -> str:
-    return "|".join(sorted((canonical_id(first), canonical_id(second))))
+def replace(table: dict[str, set[str]], first: Any, second: Any, child: Any) -> None:
+    a, b, c = canon(first), canon(second), canon(child)
+    if a and b and c:
+        table[pkey(a, b)] = {c}
 
 
-def add_result(target: dict[str, set[str]], first: Any, second: Any, child: Any) -> None:
-    first_id = canonical_id(first)
-    second_id = canonical_id(second)
-    child_id = canonical_id(child)
-    if first_id and second_id and child_id:
-        target.setdefault(pair_key(first_id, second_id), set()).add(child_id)
+def digest(text: str) -> str:
+    return hashlib.sha256(text.encode()).hexdigest()
 
 
-def public_pair_map(pair_map: dict[str, set[str]]) -> dict[str, list[str]]:
-    return {key: sorted(values) for key, values in sorted(pair_map.items())}
-
-
-def describe_payload(value: Any) -> dict[str, Any]:
-    result: dict[str, Any] = {"type": type(value).__name__}
-    if isinstance(value, (dict, list)):
-        result["count"] = len(value)
-    if isinstance(value, dict):
-        result["keysSample"] = list(value)[:20]
-    return result
+def load_all() -> tuple[dict[str, str], dict[str, Any]]:
+    texts, metadata = {}, {}
+    for source, (repo, files) in SPECS.items():
+        branch, sha = resolve(repo)
+        metadata[source] = {"repo": repo, "branch": branch, "commit": sha, "files": {}}
+        for label, path in files.items():
+            url = f"https://raw.githubusercontent.com/{repo}/{sha}/{path}"
+            text = get(url)
+            texts[f"{source}.{label}"] = text
+            metadata[source]["files"][label] = {
+                "path": path, "url": url, "bytes": len(text.encode()), "sha256": digest(text)
+            }
+    return texts, metadata
 
 
 def load_palcalc(pals_text: str, breeding_text: str) -> dict[str, Any]:
-    rows = list(csv.DictReader(io.StringIO(pals_text)))
-    pals: dict[str, dict[str, Any]] = {}
-    for index, row in enumerate(rows):
-        code = canonical_id(row.get("CodeName"))
-        if not code:
-            continue
-        pals[code] = {
-            "id": code,
-            "name": row.get("Name", ""),
-            "dex": int(row.get("PalDexNo") or -1),
-            "variant": row.get("IsVariant") == "True",
-            "rank": int(row.get("BreedPower") or 0),
-            "maleProbability": int(row.get("MaleProbability") or 0),
-            "index": int(row.get("IndexOrder") or index),
-        }
-
+    pals = {}
+    for index, row in enumerate(csv.DictReader(io.StringIO(pals_text))):
+        pal_id = canon(row.get("CodeName"))
+        if pal_id:
+            pals[pal_id] = {
+                "name": row.get("Name"), "dex": int(row.get("PalDexNo") or -1),
+                "rank": int(row.get("BreedPower") or 0), "index": int(row.get("IndexOrder") or index),
+            }
     raw = json.loads(breeding_text)
-    pairs: dict[str, set[str]] = {}
-    gender_rows: list[dict[str, Any]] = []
-    malformed = 0
+    pairs, gender_rows = {}, []
     for row in raw.get("Breeding", []):
-        first = row.get("Parent1InternalName")
-        second = row.get("Parent2InternalName")
-        child = row.get("ChildInternalName")
-        if not first or not second or not child:
-            malformed += 1
-            continue
-        add_result(pairs, first, second, child)
+        add(pairs, row.get("Parent1InternalName"), row.get("Parent2InternalName"), row.get("ChildInternalName"))
         if row.get("Parent1Gender") != "WILDCARD" or row.get("Parent2Gender") != "WILDCARD":
             gender_rows.append({
-                "parent1": canonical_id(first),
-                "parent1Gender": row.get("Parent1Gender"),
-                "parent2": canonical_id(second),
-                "parent2Gender": row.get("Parent2Gender"),
-                "child": canonical_id(child),
+                "parent1": canon(row.get("Parent1InternalName")), "parent1Gender": row.get("Parent1Gender"),
+                "parent2": canon(row.get("Parent2InternalName")), "parent2Gender": row.get("Parent2Gender"),
+                "child": canon(row.get("ChildInternalName")),
             })
+    return {"pals": pals, "pairs": pairs, "genderRows": gender_rows, "rowCount": len(raw.get("Breeding", []))}
 
-    return {
-        "pals": pals,
-        "pairs": pairs,
-        "genderRows": gender_rows,
-        "rawRowCount": len(raw.get("Breeding", [])),
-        "malformedRows": malformed,
-    }
+
+def child_map(raw: dict[str, Any], field: str) -> dict[str, set[str]]:
+    result = {}
+    for child, rows in raw.get(field, {}).items():
+        for row in rows if isinstance(rows, list) else []:
+            if isinstance(row, dict):
+                add(result, row.get("parent_a"), row.get("parent_b"), child)
+    return result
 
 
 def load_pst(text: str) -> dict[str, Any]:
     raw = json.loads(text)
-    info_raw = raw.get("pal_info", {})
-    pals: dict[str, dict[str, Any]] = {}
-    for pal_id, value in info_raw.items():
-        if not isinstance(value, dict):
-            continue
-        canonical = canonical_id(pal_id)
-        pals[canonical] = {
-            "id": canonical,
-            "name": value.get("name", pal_id),
-            "rank": int(value.get("combi_rank") or 0),
-            "rarity": int(value.get("rarity") or 0),
-            "ignoreCombi": bool(value.get("ignore_combi")),
+    pals = {
+        canon(key): {
+            "name": value.get("name"), "rank": int(value.get("combi_rank") or 0),
+            "rarity": int(value.get("rarity") or 0), "ignoreCombi": bool(value.get("ignore_combi")),
         }
-
-    pairs: dict[str, set[str]] = {}
-    category_rows: Counter[str] = Counter()
-
-    def invert_child_map(field: str, category: str) -> None:
-        value = raw.get(field, {})
-        if not isinstance(value, dict):
-            return
-        for child, parent_rows in value.items():
-            if not isinstance(parent_rows, list):
-                continue
-            for row in parent_rows:
-                if not isinstance(row, dict):
-                    continue
-                first = row.get("parent_a")
-                second = row.get("parent_b")
-                if first and second:
-                    add_result(pairs, first, second, child)
-                    category_rows[category] += 1
-
-    invert_child_map("child_to_parents_formula", "formula")
-    invert_child_map("child_to_parents_unique", "unique")
-    invert_child_map("child_to_parents_ignore", "ignore-parent-formula")
-
-    # Unique combos are also read directly to detect inconsistent reverse indexes.
-    direct_unique: dict[str, set[str]] = {}
+        for key, value in raw.get("pal_info", {}).items() if isinstance(value, dict)
+    }
+    formula = child_map(raw, "child_to_parents_formula")
+    ignore_formula = child_map(raw, "child_to_parents_ignore")
+    unique_reverse = child_map(raw, "child_to_parents_unique")
+    unique_direct = {}
     for row in raw.get("unique_combos", []):
-        if not isinstance(row, dict):
-            continue
-        add_result(direct_unique, row.get("parent_a"), row.get("parent_b"), row.get("child"))
+        if isinstance(row, dict):
+            add(unique_direct, row.get("parent_a"), row.get("parent_b"), row.get("child"))
 
-    reverse_unique = {}
-    for child, parent_rows in raw.get("child_to_parents_unique", {}).items():
-        for row in parent_rows if isinstance(parent_rows, list) else []:
-            if isinstance(row, dict):
-                add_result(reverse_unique, row.get("parent_a"), row.get("parent_b"), child)
+    # Raw union exposes generator/UI overlap defects; resolved applies game-style precedence.
+    raw_union = {}
+    for source in (formula, ignore_formula, unique_reverse):
+        for key, children in source.items():
+            raw_union.setdefault(key, set()).update(children)
+
+    resolved = {key: set(children) for key, children in formula.items()}
+    for key, children in ignore_formula.items():
+        resolved[key] = set(children)
+    for key, children in unique_direct.items():
+        resolved[key] = set(children)  # unique combinations override generic formula
+    for pal_id in pals:
+        resolved[pkey(pal_id, pal_id)] = {pal_id}  # same species is evaluated before unique/formula
 
     return {
-        "pals": pals,
-        "pairs": pairs,
-        "raw": raw,
-        "categoryRows": dict(category_rows),
-        "uniqueIndexMismatch": compare_maps(direct_unique, reverse_unique, sample_limit=25),
+        "pals": pals, "pairs": resolved, "rawPairs": raw_union,
+        "formula": formula, "ignoreFormula": ignore_formula, "unique": unique_direct,
+        "uniqueReverse": unique_reverse,
     }
 
 
 def load_paldeck(text: str) -> dict[str, Any]:
     raw = json.loads(text)
-    all_pals = list(raw.get("Pals", [])) + list(raw.get("SourceOnlyPals", []))
-    pals: dict[str, dict[str, Any]] = {}
-    name_to_id: dict[str, str] = {}
-    for pal in all_pals:
-        pal_id = canonical_id(pal.get("breedingId"))
-        name = str(pal.get("name") or "").strip()
-        if not pal_id or not name:
-            continue
-        name_to_id[canonical_id(name)] = pal_id
-        pals[pal_id] = {
-            "id": pal_id,
-            "name": name,
-            "dex": pal.get("number"),
-            "rank": pal.get("breedingRank"),
-            "canBeParent": bool(pal.get("canBeParent")),
-            "canBeChild": bool(pal.get("canBeChild")),
-            "canBeStandardChild": bool(pal.get("canBeStandardChild")),
-            "sourceOnly": pal in raw.get("SourceOnlyPals", []),
-        }
-
-    pairs: dict[str, set[str]] = {}
-    unknown: list[Any] = []
+    entries = list(raw.get("Pals", [])) + list(raw.get("SourceOnlyPals", []))
+    name_to_id, pals = {}, {}
+    for entry in entries:
+        pal_id, name = canon(entry.get("breedingId")), str(entry.get("name") or "").strip()
+        if pal_id and name:
+            name_to_id[canon(name)] = pal_id
+            pals[pal_id] = {
+                "name": name, "dex": entry.get("number"), "rank": entry.get("breedingRank"),
+                "canBeParent": bool(entry.get("canBeParent")), "canBeChild": bool(entry.get("canBeChild")),
+                "canBeStandardChild": bool(entry.get("canBeStandardChild")),
+            }
+    pairs, unknown = {}, []
     for row in raw.get("PairResults", []):
         if isinstance(row, list) and len(row) >= 3:
-            first_name, second_name, child_name = row[:3]
+            names = row[:3]
         elif isinstance(row, dict):
-            first_name, second_name, child_name = row.get("parentA"), row.get("parentB"), row.get("child")
+            names = [row.get("parentA"), row.get("parentB"), row.get("child")]
         else:
             continue
-        first = name_to_id.get(canonical_id(first_name))
-        second = name_to_id.get(canonical_id(second_name))
-        child = name_to_id.get(canonical_id(child_name))
-        if not first or not second or not child:
-            unknown.append([first_name, second_name, child_name])
-            continue
-        add_result(pairs, first, second, child)
-
+        ids = [name_to_id.get(canon(name), "") for name in names]
+        if all(ids):
+            add(pairs, *ids)
+        else:
+            unknown.append(names)
     return {
-        "pals": pals,
-        "pairs": pairs,
-        "unknownPairRows": unknown,
-        "metadata": raw.get("PairResultsMetadata", {}),
-        "rawPairRowCount": len(raw.get("PairResults", [])),
-        "topLevel": {key: describe_payload(value) for key, value in raw.items()},
+        "pals": pals, "pairs": pairs, "unknown": unknown,
+        "metadata": raw.get("PairResultsMetadata", {}), "rowCount": len(raw.get("PairResults", [])),
     }
 
 
-def compare_maps(
-    left: dict[str, set[str]],
-    right: dict[str, set[str]],
-    *,
-    sample_limit: int = 100,
-) -> dict[str, Any]:
-    left_keys = set(left)
-    right_keys = set(right)
-    common = sorted(left_keys & right_keys)
-    mismatches = [
-        {"pair": key, "left": sorted(left[key]), "right": sorted(right[key])}
-        for key in common
-        if left[key] != right[key]
-    ]
+def compare(left: dict[str, set[str]], right: dict[str, set[str]], limit: int = 100) -> dict[str, Any]:
+    lk, rk = set(left), set(right)
+    common = sorted(lk & rk)
+    mismatch = [{"pair": key, "left": sorted(left[key]), "right": sorted(right[key])}
+                for key in common if left[key] != right[key]]
     return {
-        "leftPairs": len(left),
-        "rightPairs": len(right),
-        "commonPairs": len(common),
-        "matchingPairs": len(common) - len(mismatches),
-        "mismatchCount": len(mismatches),
-        "leftOnlyCount": len(left_keys - right_keys),
-        "rightOnlyCount": len(right_keys - left_keys),
-        "mismatchSample": mismatches[:sample_limit],
-        "leftOnlySample": sorted(left_keys - right_keys)[:sample_limit],
-        "rightOnlySample": sorted(right_keys - left_keys)[:sample_limit],
+        "leftPairs": len(left), "rightPairs": len(right), "commonPairs": len(common),
+        "matchingPairs": len(common) - len(mismatch), "mismatchCount": len(mismatch),
+        "leftOnlyCount": len(lk-rk), "rightOnlyCount": len(rk-lk),
+        "mismatchSample": mismatch[:limit], "leftOnlySample": sorted(lk-rk)[:limit],
+        "rightOnlySample": sorted(rk-lk)[:limit],
     }
 
 
-def same_species_audit(source_name: str, pals: dict[str, Any], pairs: dict[str, set[str]]) -> dict[str, Any]:
-    failures = []
-    missing = []
+def same_species(pals: dict[str, Any], pairs: dict[str, set[str]]) -> dict[str, Any]:
+    missing, wrong = [], []
     for pal_id in sorted(pals):
-        key = pair_key(pal_id, pal_id)
-        if key not in pairs:
+        result = pairs.get(pkey(pal_id, pal_id))
+        if result is None:
             missing.append(pal_id)
-        elif pairs[key] != {pal_id}:
-            failures.append({"pal": pal_id, "results": sorted(pairs[key])})
-    return {
-        "source": source_name,
-        "palCount": len(pals),
-        "missingCount": len(missing),
-        "wrongResultCount": len(failures),
-        "missingSample": missing[:100],
-        "wrongResultSample": failures[:100],
-    }
+        elif result != {pal_id}:
+            wrong.append({"pal": pal_id, "results": sorted(result)})
+    return {"missingCount": len(missing), "wrongResultCount": len(wrong),
+            "missingSample": missing[:100], "wrongResultSample": wrong[:100]}
 
 
-def build_consensus(source_maps: dict[str, dict[str, set[str]]]) -> tuple[dict[str, Any], dict[str, Any]]:
-    all_keys = sorted(set().union(*(set(value) for value in source_maps.values())))
-    usable: dict[str, Any] = {}
-    disputed: list[dict[str, Any]] = []
-    insufficient: list[dict[str, Any]] = []
-    unanimous_all = 0
-    unanimous_available = 0
-    majority_with_dissent = 0
-
-    for key in all_keys:
-        present = {name: source_maps[name][key] for name in source_maps if key in source_maps[name]}
-        signatures: dict[tuple[str, ...], list[str]] = defaultdict(list)
+def classify(maps: dict[str, dict[str, set[str]]]) -> tuple[dict[str, list[str]], dict[str, Any]]:
+    keys = sorted(set().union(*(set(table) for table in maps.values())))
+    strict, available = {}, {}
+    disputed, single = [], []
+    partial_coverage = []
+    for key in keys:
+        present = {name: table[key] for name, table in maps.items() if key in table}
+        groups: dict[tuple[str, ...], list[str]] = defaultdict(list)
         for source, children in present.items():
-            signatures[tuple(sorted(children))].append(source)
-
-        if len(present) == len(source_maps) and len(signatures) == 1:
-            unanimous_all += 1
-        if len(present) >= 2 and len(signatures) == 1:
-            unanimous_available += 1
-            children = next(iter(signatures))
-            usable[key] = {
-                "children": list(children),
-                "sources": sorted(present),
-                "evidence": "unanimous-among-available-sources",
-                "allSourcesPresent": len(present) == len(source_maps),
-            }
-            continue
-
-        largest = max((len(names) for names in signatures.values()), default=0)
-        details = {source: sorted(children) for source, children in sorted(present.items())}
-        if largest >= 2:
-            majority_with_dissent += 1
-            disputed.append({"pair": key, "results": details, "reason": "source-dissent"})
+            groups[tuple(sorted(children))].append(source)
+        if len(present) == len(maps) and len(groups) == 1:
+            strict[key] = list(next(iter(groups)))
+            available[key] = strict[key]
+        elif len(present) >= 2 and len(groups) == 1:
+            available[key] = list(next(iter(groups)))
         elif len(present) >= 2:
-            disputed.append({"pair": key, "results": details, "reason": "no-two-sources-agree"})
+            values = list(present.values())
+            # One source may omit a gender-specific outcome while returning a valid subset.
+            union = set().union(*values)
+            if all(value <= union for value in values) and any(value < union for value in values):
+                partial_coverage.append({"pair": key, "results": {k: sorted(v) for k, v in present.items()}})
+            else:
+                disputed.append({"pair": key, "results": {k: sorted(v) for k, v in present.items()}})
         else:
-            insufficient.append({"pair": key, "results": details, "reason": "single-source-only"})
-
-    summary = {
-        "unionPairs": len(all_keys),
-        "unanimousAllSources": unanimous_all,
-        "unanimousAvailableSources": unanimous_available,
-        "majorityWithDissent": majority_with_dissent,
-        "disputedPairs": len(disputed),
-        "insufficientPairs": len(insufficient),
-        "usablePairs": len(usable),
-        "disputedSample": disputed[:200],
-        "insufficientSample": insufficient[:200],
+            single.append({"pair": key, "results": {k: sorted(v) for k, v in present.items()}})
+    return strict, {
+        "unionPairs": len(keys), "strictAllSourcePairs": len(strict),
+        "nonDissentingAvailablePairs": len(available), "disputedPairs": len(disputed),
+        "partialCoveragePairs": len(partial_coverage), "singleSourcePairs": len(single),
+        "disputedSample": disputed[:200], "partialCoverageSample": partial_coverage[:200],
+        "singleSourceSample": single[:200],
     }
-    return usable, summary
 
 
-def detect_source_drift(source_texts: dict[str, str]) -> dict[str, Any]:
-    pst_generator = source_texts["pst.generator"]
-    pst_notes = source_texts["pst.notes"]
-    palcalc_reader = source_texts["palcalc.reader"]
-    palcalc_calculator = source_texts["palcalc.calculator"]
-
+def source_drift(texts: dict[str, str]) -> dict[str, Any]:
+    generator, notes, ui = texts["pst.generator"], texts["pst.notes"], texts["pst.ui"]
+    reader, calculator = texts["palcalc.reader"], texts["palcalc.calculator"]
     return {
         "pst": {
-            "generatorReadsIgnoreCombi": "IgnoreCombi" in pst_generator,
-            "generatorReadsRarity": "Rarity" in pst_generator,
-            "generatorExcludesUniqueChildren": "unique_child_tribes" in pst_generator and "candidate_pool" in pst_generator,
-            "generatorHigherRankDistanceTie": bool(re.search(r"diff\s*==\s*best_diff[^\n]+\['rank'\]\s*>\s*best\['rank'\]", pst_generator)),
-            "notesClaimRarityTieBreaker": "rarity" in pst_notes.lower() and "tiebreaker" in pst_notes.lower(),
-            "notesAndGeneratorConflict": (
-                "rarity" in pst_notes.lower()
-                and "tiebreaker" in pst_notes.lower()
-                and bool(re.search(r"diff\s*==\s*best_diff[^\n]+\['rank'\]\s*>\s*best\['rank'\]", pst_generator))
-            ),
+            "readsIgnoreCombi": "IgnoreCombi" in generator,
+            "excludesUniqueChildren": "unique_child_tribes" in generator and "candidate_pool" in generator,
+            "generatorUsesHigherRankDistanceTie": bool(re.search(r"diff\s*==\s*best_diff[^\n]+\['rank'\]\s*>\s*best\['rank'\]", generator)),
+            "notesClaimRarityTie": "rarity" in notes.lower() and "tiebreaker" in notes.lower(),
+            "documentationConflict": "rarity" in notes.lower() and "tiebreaker" in notes.lower()
+                and bool(re.search(r"diff\s*==\s*best_diff[^\n]+\['rank'\]\s*>\s*best\['rank'\]", generator)),
+            "uiListsUniqueBeforeFormula": "('unique', bd.get('child_to_parents_unique'" in ui,
+            "uiChildModeCanExposeOverlappingResults": "children_map.setdefault" in ui,
         },
         "palcalc": {
-            "readerReadsIgnoreCombi": "IgnoreCombi" in palcalc_reader,
-            "readerReadsDuplicatePriority": "CombiDuplicatePriority" in palcalc_reader,
-            "calculatorUsesDuplicatePriority": "BreedingPowerPriority" in palcalc_calculator,
-            "calculatorExcludesUniqueChildren": "specificBreedingCombos.Select" in palcalc_calculator,
+            "readerReadsIgnoreCombi": "IgnoreCombi" in reader,
+            "readerReadsDuplicatePriority": "CombiDuplicatePriority" in reader,
+            "sameSpeciesFirst": "if (parent1.Pal == parent2.Pal)" in calculator,
+            "uniqueBeforeFormula": "if (specialCombo.Any())" in calculator,
+            "excludesUniqueChildrenFromFormula": ".Where(p => !uniqueCombos.Any(c => p == c.Child))" in calculator,
+            "usesDuplicatePriority": "ThenByDescending(p => p.BreedingPowerPriority)" in calculator,
         },
     }
-
-
-def load_sources() -> tuple[dict[str, str], dict[str, Any]]:
-    texts: dict[str, str] = {}
-    metadata: dict[str, Any] = {}
-    for source_name, spec in SOURCE_SPECS.items():
-        repo = spec["repo"]
-        sha, resolved_ref = resolve_sha(repo, spec["ref"])
-        source_files = {}
-        for label, path in spec["files"].items():
-            url = raw_url(repo, sha, path)
-            text = request_text(url)
-            texts[f"{source_name}.{label}"] = text
-            source_files[label] = {
-                "path": path,
-                "url": url,
-                "bytes": len(text.encode("utf-8")),
-                "sha256": sha256_text(text),
-            }
-        metadata[source_name] = {
-            "repo": repo,
-            "requestedRef": spec["ref"],
-            "resolvedRef": resolved_ref,
-            "commit": sha,
-            "files": source_files,
-        }
-    return texts, metadata
-
-
-def validate_output(report: dict[str, Any], consensus: dict[str, Any]) -> None:
-    source_pairs = report["sourcesSummary"]
-    for required in ("palcalc", "pst", "paldeck"):
-        if required not in source_pairs or source_pairs[required]["pairCount"] <= 0:
-            raise RuntimeError(f"Missing usable pair data from {required}")
-
-    pairs = consensus.get("pairs", {})
-    for key, row in pairs.items():
-        if "|" not in key:
-            raise RuntimeError(f"Invalid pair key: {key}")
-        if len(row.get("sources", [])) < 2:
-            raise RuntimeError(f"Consensus pair lacks two sources: {key}")
-        if not row.get("children"):
-            raise RuntimeError(f"Consensus pair has no child: {key}")
-
-    if len(pairs) != report["consensus"]["usablePairs"]:
-        raise RuntimeError("Consensus pair count does not match report")
 
 
 def main() -> None:
-    texts, source_metadata = load_sources()
+    texts, metadata = load_all()
     palcalc = load_palcalc(texts["palcalc.pals"], texts["palcalc.breeding"])
     pst = load_pst(texts["pst.breeding"])
     paldeck = load_paldeck(texts["paldeck.breeding"])
+    maps = {"palcalc": palcalc["pairs"], "pst-resolved": pst["pairs"], "paldeck-paldb": paldeck["pairs"]}
+    strict, consensus = classify(maps)
 
-    source_maps = {
-        "palcalc": palcalc["pairs"],
-        "pst": pst["pairs"],
-        "paldeck-paldb": paldeck["pairs"],
-    }
-    usable, consensus_summary = build_consensus(source_maps)
+    roster_sets = {"palcalc": set(palcalc["pals"]), "pst": set(pst["pals"]), "paldeck": set(paldeck["pals"])}
+    union = sorted(set().union(*roster_sets.values()))
+    intersection = sorted(set.intersection(*roster_sets.values()))
+    presence = Counter(sum(pal in roster for roster in roster_sets.values()) for pal in union)
+    supported = sorted(pal for pal in union if sum(pal in roster for roster in roster_sets.values()) >= 2)
 
-    roster_union = sorted(set(palcalc["pals"]) | set(pst["pals"]) | set(paldeck["pals"]))
-    roster_intersection = sorted(set(palcalc["pals"]) & set(pst["pals"]) & set(paldeck["pals"]))
-    roster_presence = Counter()
-    for pal_id in roster_union:
-        roster_presence[sum(pal_id in roster for roster in (palcalc["pals"], pst["pals"], paldeck["pals"]))] += 1
-
-    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     report = {
-        "schemaVersion": 3,
-        "generatedAt": generated_at,
-        "policy": {
-            "authoritativeSource": None,
-            "usableRule": "At least two sources agree and no available source dissents",
-            "gameRuntimeVerified": False,
-            "failClosed": True,
-        },
-        "sourceMetadata": source_metadata,
+        "schemaVersion": 4, "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "policy": {"authoritativeSource": None, "gameRuntimeVerified": False, "failClosed": True,
+                   "strictConsensusRule": "All three effective source tables contain the pair and return the same child set"},
+        "sourceMetadata": metadata,
         "sourcesSummary": {
-            "palcalc": {
-                "palCount": len(palcalc["pals"]),
-                "pairCount": len(palcalc["pairs"]),
-                "rawRowCount": palcalc["rawRowCount"],
-                "genderSpecificRows": len(palcalc["genderRows"]),
-                "malformedRows": palcalc["malformedRows"],
-            },
-            "pst": {
-                "palCount": len(pst["pals"]),
-                "pairCount": len(pst["pairs"]),
-                "ignoreCombiCount": sum(bool(p["ignoreCombi"]) for p in pst["pals"].values()),
-                "categoryRows": pst["categoryRows"],
-                "uniqueIndexMismatch": pst["uniqueIndexMismatch"],
-            },
-            "paldeck": {
-                "palCount": len(paldeck["pals"]),
-                "pairCount": len(paldeck["pairs"]),
-                "rawPairRowCount": paldeck["rawPairRowCount"],
-                "unknownPairRows": len(paldeck["unknownPairRows"]),
-                "metadata": paldeck["metadata"],
-            },
+            "palcalc": {"palCount": len(palcalc["pals"]), "pairCount": len(palcalc["pairs"]),
+                        "rowCount": palcalc["rowCount"], "genderSpecificRows": len(palcalc["genderRows"])},
+            "pst": {"palCount": len(pst["pals"]), "resolvedPairCount": len(pst["pairs"]),
+                    "rawUnionPairCount": len(pst["rawPairs"]), "ignoreCombiCount": sum(p["ignoreCombi"] for p in pst["pals"].values()),
+                    "formulaPairs": len(pst["formula"]), "ignoreFormulaPairs": len(pst["ignoreFormula"]),
+                    "uniquePairs": len(pst["unique"]), "uniqueReverseIntegrity": compare(pst["unique"], pst["uniqueReverse"], 25)},
+            "paldeck": {"palCount": len(paldeck["pals"]), "pairCount": len(paldeck["pairs"]),
+                        "rowCount": paldeck["rowCount"], "unknownRows": len(paldeck["unknown"]), "metadata": paldeck["metadata"]},
         },
-        "roster": {
-            "unionCount": len(roster_union),
-            "intersectionCount": len(roster_intersection),
-            "presenceBySourceCount": {str(key): value for key, value in sorted(roster_presence.items())},
-            "palcalcOnly": sorted(set(palcalc["pals"]) - set(pst["pals"]) - set(paldeck["pals"])),
-            "pstOnly": sorted(set(pst["pals"]) - set(palcalc["pals"]) - set(paldeck["pals"])),
-            "paldeckOnly": sorted(set(paldeck["pals"]) - set(palcalc["pals"]) - set(pst["pals"])),
-            "union": roster_union,
-            "intersection": roster_intersection,
-        },
+        "roster": {"unionCount": len(union), "intersectionCount": len(intersection), "supportedByAtLeastTwoCount": len(supported),
+                   "presenceBySourceCount": {str(k): v for k, v in sorted(presence.items())},
+                   "supportedByAtLeastTwo": supported,
+                   "singleSourceOnly": {name: sorted(roster - set().union(*(v for k, v in roster_sets.items() if k != name)))
+                                        for name, roster in roster_sets.items()}},
         "comparisons": {
-            "palcalcVsPst": compare_maps(palcalc["pairs"], pst["pairs"]),
-            "palcalcVsPaldeckPalDB": compare_maps(palcalc["pairs"], paldeck["pairs"]),
-            "pstVsPaldeckPalDB": compare_maps(pst["pairs"], paldeck["pairs"]),
+            "palcalcVsPstResolved": compare(palcalc["pairs"], pst["pairs"]),
+            "palcalcVsPaldeckPalDB": compare(palcalc["pairs"], paldeck["pairs"]),
+            "pstResolvedVsPaldeckPalDB": compare(pst["pairs"], paldeck["pairs"]),
+            "pstRawVsResolved": compare(pst["rawPairs"], pst["pairs"]),
         },
-        "sameSpecies": {
-            "palcalc": same_species_audit("palcalc", palcalc["pals"], palcalc["pairs"]),
-            "pst": same_species_audit("pst", pst["pals"], pst["pairs"]),
-            "paldeck": same_species_audit("paldeck", paldeck["pals"], paldeck["pairs"]),
-        },
-        "sourceDrift": detect_source_drift(texts),
-        "consensus": consensus_summary,
+        "sameSpecies": {"palcalc": same_species(palcalc["pals"], palcalc["pairs"]),
+                        "pstRaw": same_species(pst["pals"], pst["rawPairs"]),
+                        "pstResolved": same_species(pst["pals"], pst["pairs"]),
+                        "paldeck": same_species(paldeck["pals"], paldeck["pairs"])},
+        "sourceDrift": source_drift(texts), "consensus": consensus,
         "genderSpecificPalcalcRows": palcalc["genderRows"],
     }
-
-    consensus = {
-        "schemaVersion": 1,
-        "generatedAt": generated_at,
-        "status": "cross-source-consensus-not-game-runtime-verified",
-        "failClosed": True,
-        "sourceCommits": {name: value["commit"] for name, value in source_metadata.items()},
-        "pairCount": len(usable),
-        "pairs": usable,
+    consensus_file = {
+        "schemaVersion": 2, "generatedAt": report["generatedAt"],
+        "status": "strict-three-source-consensus-not-game-runtime-verified", "failClosed": True,
+        "sourceCommits": {name: data["commit"] for name, data in metadata.items()},
+        "pairCount": len(strict), "pairs": strict,
     }
+    if consensus_file["pairCount"] != len(consensus_file["pairs"]):
+        raise RuntimeError("Consensus count mismatch")
+    if not all(children for children in strict.values()):
+        raise RuntimeError("Empty consensus child set")
+    if any(summary.get("pairCount", summary.get("resolvedPairCount", 0)) <= 0 for summary in report["sourcesSummary"].values()):
+        raise RuntimeError("A source produced no pairs")
 
-    validate_output(report, consensus)
-    AUDIT_DIR.mkdir(parents=True, exist_ok=True)
-    REPORT_OUT.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    CONSENSUS_OUT.write_text(json.dumps(consensus, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-    print(json.dumps({
-        "report": str(REPORT_OUT.relative_to(ROOT)),
-        "consensus": str(CONSENSUS_OUT.relative_to(ROOT)),
-        "sourcePairs": {name: len(value) for name, value in source_maps.items()},
-        "usablePairs": len(usable),
-        "disputedPairs": consensus_summary["disputedPairs"],
-        "insufficientPairs": consensus_summary["insufficientPairs"],
-        "sourceDrift": report["sourceDrift"],
-    }, ensure_ascii=False, indent=2))
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    REPORT_PATH.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    CONSENSUS_PATH.write_text(json.dumps(consensus_file, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+    print(json.dumps({"sourcePairs": {k: len(v) for k, v in maps.items()}, "consensus": consensus,
+                      "roster": {"union": len(union), "intersection": len(intersection), "supported": len(supported)},
+                      "sourceDrift": report["sourceDrift"]}, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
     try:
         main()
     except urllib.error.HTTPError as error:
-        body = error.read().decode("utf-8", errors="replace")
-        raise SystemExit(f"HTTP {error.code} while auditing sources: {body[:1000]}") from error
+        detail = error.read().decode(errors="replace")
+        raise SystemExit(f"HTTP {error.code}: {detail[:1000]}") from error
