@@ -9,6 +9,7 @@ const DATA_URLS={
 
 const ELEMENT_JP={Neutral:"無",Fire:"炎",Water:"水",Electric:"雷",Grass:"草",Dark:"闇",Dragon:"竜",Ground:"地",Ice:"氷"};
 const WORK_JP={emitflame:"火おこし",watering:"水やり",seeding:"種まき",generateelectricity:"発電",handcraft:"手作業",collection:"採集",deforest:"伐採",mining:"採掘",productmedicine:"製薬",cool:"冷却",transport:"運搬",monsterfarm:"牧場"};
+const BREEDING_AUDIT_PASSED=false;
 
 let pals=[],byName=new Map(),byCode=new Map(),byId=new Map(),pairMap=new Map(),parentsByChild=new Map(),offspringByParent=new Map();
 let selected={a:null,b:null,target:null,parent:null,tree:null};
@@ -66,16 +67,16 @@ function initialiseData(csv,jp,meta,breedingData){
  buildIndexes(breedingData?.Breeding||[]);
  validateIndexes();
  fillFilterOptions();
- $("#dataStatus").textContent="ゲームデータ由来配合表 読込完了";
- $("#dataStatus").className="badge ok";
+ $("#dataStatus").textContent=BREEDING_AUDIT_PASSED?"配合表 検証完了":"再点検不合格・配合検証中";
+ $("#dataStatus").className=BREEDING_AUDIT_PASSED?"badge ok":"badge warn";
  $("#dataStatus").style.cursor="default";
  $("#dataStatus").onclick=null;
  $("#palCount").textContent=pals.length+"形態";
- $("#comboCount").textContent=pairMap.size.toLocaleString()+"組";
+ $("#comboCount").textContent=BREEDING_AUDIT_PASSED?pairMap.size.toLocaleString()+"組":"検証中";
  renderAll();
 }
 async function load(){
- $("#dataStatus").textContent="ゲームデータ由来配合表を読込中";
+ $("#dataStatus").textContent="PalCalc生成データを内部検査中";
  $("#dataStatus").className="badge warn";
  pairMap.clear();parentsByChild.clear();offspringByParent.clear();
  try{
@@ -86,13 +87,13 @@ async function load(){
  }catch(e){
   console.error(e);
   pals=[];byName.clear();byCode.clear();byId.clear();pairMap.clear();parentsByChild.clear();offspringByParent.clear();
-  $("#palCount").textContent="0形態";$("#comboCount").textContent="0組";
-  $("#dataStatus").textContent="配合表の取得・検証失敗　タップで再試行";
+  $("#palCount").textContent="0形態";$("#comboCount").textContent="検証中";
+  $("#dataStatus").textContent="データの取得・内部検査失敗　タップで再試行";
   $("#dataStatus").className="badge warn";
   $("#dataStatus").style.cursor="pointer";
   $("#dataStatus").onclick=()=>{$("#dataStatus").onclick=null;load()};
   renderAll();
-  toast("配合表を検証できないため、配合結果は表示しません");
+  toast("データを検査できませんでした");
  }
 }
 function buildIndexes(rows){
@@ -111,7 +112,7 @@ function buildIndexes(rows){
   const genderSpecific=row.Parent1Gender!=="WILDCARD"||row.Parent2Gender!=="WILDCARD";
   const note=genderSpecific
    ?`${first.jp}${genderMark(row.Parent1Gender)} × ${second.jp}${genderMark(row.Parent2Gender)} の場合`
-   :"ゲームデータ由来配合";
+   :"PalCalc生成配合（未検証）";
   pairMap.get(key).push({
    first,second,child,note,
    parent1Gender:row.Parent1Gender,parent2Gender:row.Parent2Gender
