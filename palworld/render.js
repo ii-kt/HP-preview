@@ -10,6 +10,10 @@ function slotHTML(p,label){
  return p?`${mark(p)}<div class="jpname">${esc(p.jp)}</div><div class="enname">${esc(p.en)}</div><div class="no">No.${String(p.no).padStart(3,"0")}${p.variant?"B":""}　配合値 ${p.power}</div>`
  :`${mark(null)}<div class="jpname">${label}</div><div class="enname">タップして検索</div>`;
 }
+function multiResultSlotHTML(results){
+ const icons=results.map(r=>mark(r.child,true)).join("");
+ return `<div style="display:flex;gap:8px;justify-content:center;align-items:center">${icons}</div><div class="jpname">性別で${results.length}通り</div><div class="enname">下の条件別結果を確認してください</div>`;
+}
 function pickButtonHTML(p,label){return p?`${mark(p,true)}<span class="grow"><small>${label}</small><strong>${esc(p.jp)}</strong><small>${esc(p.en)} · No.${p.no}${p.variant?"B":""}</small></span><b>変更</b>`:`${mark(null,true)}<span class="grow"><small>${label}</small><strong>パルを選択</strong><small>日本語名・番号で検索</small></span><b>選択</b>`}
 function resultRow(r){
  return `<article class="result-row">${palHTML(r.first)}<span class="arrow">＋</span>${palHTML(r.second)}<span class="arrow">→</span>${palHTML(r.child)}<div class="note">${esc(r.note||"")}</div></article>`;
@@ -18,7 +22,11 @@ function getResults(a,b){return a&&b?(pairMap.get(pairKey(a.uid,b.uid))||[]):[]}
 function renderParents(){
  $("#parentA").innerHTML=slotHTML(selected.a,"親Aを選択");$("#parentB").innerHTML=slotHTML(selected.b,"親Bを選択");
  const rs=getResults(selected.a,selected.b);
- $("#childSlot").innerHTML=rs[0]?slotHTML(rs[0].child,"子パル"):`${mark(null)}<div class="jpname">結果</div><div class="enname">親を2体選択</div>`;
+ $("#childSlot").innerHTML=rs.length===1
+  ?slotHTML(rs[0].child,"子パル")
+  :rs.length>1
+   ?multiResultSlotHTML(rs)
+   :`${mark(null)}<div class="jpname">結果</div><div class="enname">親を2体選択</div>`;
  $("#parentResults").innerHTML=rs.length>1?rs.map(resultRow).join(""):"";
 }
 function searchable(p,q){q=q.trim().toLowerCase();return !q||p.jp.toLowerCase().includes(q)||p.en.toLowerCase().includes(q)||String(p.no).includes(q)}
@@ -44,7 +52,7 @@ function renderDex(){
  let list=[...pals],q=$("#dexSearch").value||"",v=$("#dexVariant").value,el=$("#dexElement").value,w=$("#dexWork").value,l=+$("#dexWorkLevel").value;
  list=list.filter(p=>searchable(p,q)&&(v==="all"||(v==="variant")===p.variant)&&(!el||p.elements.includes(el))&&(!w||(+p.work[w]||0)>=l));
  const s=$("#dexSort").value;list.sort((a,b)=>s==="desc"?palSort(b,a):s==="jp"?a.jp.localeCompare(b.jp,"ja"):s==="power"?a.power-b.power:palSort(a,b));
- $("#dexCount").textContent=`${list.length}体`;
+ $("#dexCount").textContent=`${list.length}形態`;
  $("#dexGrid").innerHTML=list.map(p=>`<article class="pal-card">${mark(p,true)}<div style="min-width:0;flex:1"><strong>${esc(p.jp)}</strong><div class="enname">${esc(p.en)}</div><div class="no">No.${p.no}${p.variant?"B":""} · 配合値 ${p.power}</div><div class="tags">${p.elements.map(e=>`<span class="tag">${esc(ELEMENT_JP[e]||e)}</span>`).join("")}${Object.entries(p.work).filter(([,x])=>x).map(([k,x])=>`<span class="tag">${esc(WORK_JP[k]||k)}Lv.${x}</span>`).join("")}</div></div></article>`).join("");
 }
 function fillFilterOptions(){
