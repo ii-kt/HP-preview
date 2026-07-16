@@ -40,37 +40,71 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python palworld/tools/audit_breeding_sources.py
-      - name: Build cross-validated calculator dataset
+      - name: Build compact cross-validated calculator dataset
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python palworld/tools/build_verified_dataset.py
-      - name: Validate generated files
+      - name: Validate generated files and triangular indexing
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
+
           report = json.loads(Path('palworld/audit/source-audit.json').read_text(encoding='utf-8'))
           consensus = json.loads(Path('palworld/audit/consensus.json').read_text(encoding='utf-8'))
           pals = json.loads(Path('palworld/data/pals.verified.json').read_text(encoding='utf-8'))['pals']
-          breeding = json.loads(Path('palworld/data/breeding.verified.json').read_text(encoding='utf-8'))['breeding']
+          compact = json.loads(Path('palworld/data/breeding.verified.json').read_text(encoding='utf-8'))
           verification = json.loads(Path('palworld/data/verification.json').read_text(encoding='utf-8'))
+
           assert report['schemaVersion'] == 4 and report['policy']['failClosed'] is True
           assert consensus['schemaVersion'] == 2 and consensus['failClosed'] is True
           assert consensus['pairCount'] == len(consensus['pairs'])
+          assert verification['schemaVersion'] == 3
           assert verification['palCount'] == len(pals) == 299
           assert verification['unorderedPairCount'] == 44850
-          assert verification['resultRowCount'] == len(breeding) == 44851
+          assert verification['compactChildCount'] == len(compact['children']) == 44850
+          assert verification['resultRowCount'] == 44851
           assert verification['genderDependentPairs'] == ['catmage|foxmage']
-          ids = {pal['id'] for pal in pals}
+          assert compact['schemaVersion'] == 1
+
+          ids = [pal['id'] for pal in pals]
+          assert compact['palOrder'] == ids
+          assert len(set(ids)) == len(ids)
           assert 'worldtreedragon' in ids
           assert 'plantslime_flower' not in ids
-          assert all(row['parent1'] in ids and row['parent2'] in ids and row['child'] in ids for row in breeding)
-          pair_keys = {'|'.join(sorted((row['parent1'], row['parent2']))) for row in breeding}
-          assert len(pair_keys) == 44850
+          assert all(0 <= child < len(pals) for child in compact['children'])
+          assert len(compact['genderOverrides']) == 1
+
+          override = compact['genderOverrides'][0]
+          assert len(override['rows']) == 2
+          pair_ids = '|'.join(sorted((ids[override['pair'][0]], ids[override['pair'][1]])))
+          assert pair_ids == 'catmage|foxmage'
+          assert override['pairIndex'] < len(compact['children'])
+          assert all(
+              0 <= row[field] < len(pals)
+              for row in override['rows']
+              for field in ('parent1', 'parent2', 'child')
+          )
+          assert {row['parent1Gender'] for row in override['rows']} == {'FEMALE', 'MALE'}
+          assert {row['parent2Gender'] for row in override['rows']} == {'FEMALE', 'MALE'}
+
+          cursor = 0
+          for first in range(len(pals)):
+              for second in range(first, len(pals)):
+                  expected = first * len(pals) - first * (first - 1) // 2 + (second - first)
+                  assert cursor == expected
+                  cursor += 1
+          assert cursor == 44850
+
+          assert Path('palworld/data/breeding.verified.json').stat().st_size < 500_000
+          assert Path('palworld/data/pals.verified.json').stat().st_size < 250_000
           print(json.dumps({
-              'pals': len(pals), 'pairs': len(pair_keys), 'rows': len(breeding),
+              'pals': len(pals),
+              'pairs': len(compact['children']),
+              'logicalRows': verification['resultRowCount'],
+              'breedingBytes': Path('palworld/data/breeding.verified.json').stat().st_size,
+              'palsBytes': Path('palworld/data/pals.verified.json').stat().st_size,
               'strictConsensusPairs': consensus['pairCount'],
-              'genderDependentPairs': verification['genderDependentPairs'],
           }, indent=2))
           PY
       - name: Upload audit evidence and dataset
