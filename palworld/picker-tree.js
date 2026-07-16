@@ -19,19 +19,29 @@ function renderTree(){
  canvas.innerHTML=treeOrientation==="result"?ancestorNode(selected.tree,0,depth,"r"):descendantNode(selected.tree,0,depth,"d");
  applyTreeTransform();
 }
-function nodeCard(p,pairs,path){
- const idx=Math.min(treeSelections.get(path)||0,Math.max(0,pairs.length-1));treeSelections.set(path,idx);
- return `<div class="tree-node">${palHTML(p,true)}<div class="no" style="text-align:center;margin-top:4px">配合値 ${p.power}</div>${pairs.length?`<div class="combo-nav"><button data-nav="${path}" data-d="-1">‹</button><span>${idx+1} / ${pairs.length}</span><button data-nav="${path}" data-d="1">›</button></div>`:""}</div>`;
+function isGenderSpecific(result){return result&&(result.parent1Gender!=="WILDCARD"||result.parent2Gender!=="WILDCARD")}
+function requiredGenderFor(result,pal){
+ if(!result)return "";
+ if(pal.uid===result.first.uid)return genderMark(result.parent1Gender);
+ if(pal.uid===result.second.uid)return genderMark(result.parent2Gender);
+ return "";
 }
-function ancestorNode(p,level,max,path){
+function nodeCard(p,pairs,path,requiredGender="",condition=""){
+ const idx=Math.min(treeSelections.get(path)||0,Math.max(0,pairs.length-1));treeSelections.set(path,idx);
+ return `<div class="tree-node">${palHTML(p,true)}<div class="no" style="text-align:center;margin-top:4px">配合値 ${p.power}</div>${requiredGender?`<div class="tree-gender">必要性別 ${esc(requiredGender)}</div>`:""}${condition?`<div class="tree-condition">${esc(condition)}</div>`:""}${pairs.length?`<div class="combo-nav"><button data-nav="${path}" data-d="-1">‹</button><span>${idx+1} / ${pairs.length}</span><button data-nav="${path}" data-d="1">›</button></div>`:""}</div>`;
+}
+function ancestorNode(p,level,max,path,requiredGender=""){
  const pairs=parentsByChild.get(p.uid)||[],idx=Math.min(treeSelections.get(path)||0,Math.max(0,pairs.length-1)),r=pairs[idx];
- if(level>=max||!r)return `<div class="tree-branch">${nodeCard(p,pairs,path)}</div>`;
- return `<div class="tree-branch">${nodeCard(p,pairs,path)}<div class="tree-edge"></div><div class="tree-children">${ancestorNode(r.first,level+1,max,path+"a")}${ancestorNode(r.second,level+1,max,path+"b")}</div></div>`;
+ const condition=isGenderSpecific(r)?r.note:"";
+ if(level>=max||!r)return `<div class="tree-branch">${nodeCard(p,pairs,path,requiredGender)}</div>`;
+ return `<div class="tree-branch">${nodeCard(p,pairs,path,requiredGender,condition)}<div class="tree-edge"></div><div class="tree-children">${ancestorNode(r.first,level+1,max,path+"a",requiredGenderFor(r,r.first))}${ancestorNode(r.second,level+1,max,path+"b",requiredGenderFor(r,r.second))}</div></div>`;
 }
 function descendantNode(p,level,max,path){
  const pairs=offspringByParent.get(p.uid)||[],idx=Math.min(treeSelections.get(path)||0,Math.max(0,pairs.length-1)),r=pairs[idx];
+ const condition=isGenderSpecific(r)?r.note:"";
+ const parentGender=requiredGenderFor(r,p);
  if(level>=max||!r)return `<div class="tree-branch">${nodeCard(p,pairs,path)}</div>`;
- return `<div class="tree-branch">${nodeCard(p,pairs,path)}<div class="tree-edge"></div><div class="tree-children"><div class="tree-branch">${nodeCard(r.partner,[],path+"p")}</div>${descendantNode(r.child,level+1,max,path+"c")}</div></div>`;
+ return `<div class="tree-branch">${nodeCard(p,pairs,path,parentGender,condition)}<div class="tree-edge"></div><div class="tree-children"><div class="tree-branch">${nodeCard(r.partner,[],path+"p",requiredGenderFor(r,r.partner))}</div>${descendantNode(r.child,level+1,max,path+"c")}</div></div>`;
 }
 function applyTreeTransform(){$("#treeCanvas").style.transform=`translate(${panX}px,${panY}px) scale(${zoom})`}
 function renderAll(){renderParents();renderTarget();renderOffspring();renderDex();renderTree()}
