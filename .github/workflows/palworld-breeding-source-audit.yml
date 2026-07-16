@@ -45,19 +45,27 @@ jobs:
           from pathlib import Path
           report = json.loads(Path('palworld/audit/source-audit.json').read_text(encoding='utf-8'))
           consensus = json.loads(Path('palworld/audit/consensus.json').read_text(encoding='utf-8'))
-          assert report['schemaVersion'] == 3
+          assert report['schemaVersion'] == 4
           assert report['policy']['failClosed'] is True
+          assert consensus['schemaVersion'] == 2
           assert consensus['failClosed'] is True
           assert consensus['pairCount'] == len(consensus['pairs'])
-          for key, row in consensus['pairs'].items():
+          assert report['sourcesSummary']['palcalc']['pairCount'] > 0
+          assert report['sourcesSummary']['pst']['resolvedPairCount'] > 0
+          assert report['sourcesSummary']['paldeck']['pairCount'] > 0
+          for key, children in consensus['pairs'].items():
               assert '|' in key
-              assert len(row['sources']) >= 2
-              assert row['children']
+              assert children
           print(json.dumps({
-              'sourcePairs': {k: v['pairCount'] for k, v in report['sourcesSummary'].items()},
-              'consensusPairs': consensus['pairCount'],
+              'sourcePairs': {
+                  'palcalc': report['sourcesSummary']['palcalc']['pairCount'],
+                  'pstResolved': report['sourcesSummary']['pst']['resolvedPairCount'],
+                  'paldeck': report['sourcesSummary']['paldeck']['pairCount'],
+              },
+              'strictConsensusPairs': consensus['pairCount'],
               'disputedPairs': report['consensus']['disputedPairs'],
-              'insufficientPairs': report['consensus']['insufficientPairs'],
+              'partialCoveragePairs': report['consensus']['partialCoveragePairs'],
+              'singleSourcePairs': report['consensus']['singleSourcePairs'],
           }, indent=2))
           PY
       - name: Upload audit evidence
