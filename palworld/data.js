@@ -66,7 +66,7 @@ function initialiseData(csv,jp,meta,breedingData){
  buildIndexes(breedingData?.Breeding||[]);
  validateIndexes();
  fillFilterOptions();
- $("#dataStatus").textContent="ゲームデータ配合表 読込完了";
+ $("#dataStatus").textContent="ゲームデータ由来配合表 読込完了";
  $("#dataStatus").className="badge ok";
  $("#dataStatus").style.cursor="default";
  $("#dataStatus").onclick=null;
@@ -75,7 +75,7 @@ function initialiseData(csv,jp,meta,breedingData){
  renderAll();
 }
 async function load(){
- $("#dataStatus").textContent="確定配合表を読込中";
+ $("#dataStatus").textContent="ゲームデータ由来配合表を読込中";
  $("#dataStatus").className="badge warn";
  pairMap.clear();parentsByChild.clear();offspringByParent.clear();
  try{
@@ -87,12 +87,12 @@ async function load(){
   console.error(e);
   pals=[];byName.clear();byCode.clear();byId.clear();pairMap.clear();parentsByChild.clear();offspringByParent.clear();
   $("#palCount").textContent="0形態";$("#comboCount").textContent="0組";
-  $("#dataStatus").textContent="確定配合表の取得・検証失敗　タップで再試行";
+  $("#dataStatus").textContent="配合表の取得・検証失敗　タップで再試行";
   $("#dataStatus").className="badge warn";
   $("#dataStatus").style.cursor="pointer";
   $("#dataStatus").onclick=()=>{$("#dataStatus").onclick=null;load()};
   renderAll();
-  toast("確定配合表を検証できないため、配合結果は表示しません");
+  toast("配合表を検証できないため、配合結果は表示しません");
  }
 }
 function buildIndexes(rows){
@@ -111,7 +111,7 @@ function buildIndexes(rows){
   const genderSpecific=row.Parent1Gender!=="WILDCARD"||row.Parent2Gender!=="WILDCARD";
   const note=genderSpecific
    ?`${first.jp}${genderMark(row.Parent1Gender)} × ${second.jp}${genderMark(row.Parent2Gender)} の場合`
-   :"ゲームデータ確定配合";
+   :"ゲームデータ由来配合";
   pairMap.get(key).push({
    first,second,child,note,
    parent1Gender:row.Parent1Gender,parent2Gender:row.Parent2Gender
