@@ -47,6 +47,11 @@ function mergeMeta(meta){
  });
 }
 function genderMark(g){return g==="MALE"?"♂":g==="FEMALE"?"♀":""}
+function normalizedResultSignature(first,second,child,gender1,gender2){
+ const a={uid:first.uid,gender:gender1},b={uid:second.uid,gender:gender2};
+ const [left,right]=a.uid<=b.uid?[a,b]:[b,a];
+ return [left.uid,left.gender,right.uid,right.gender,child.uid].join("|");
+}
 function initialiseData(csv,jp,meta,breedingData){
  pals=parseCSV(csv);
  byName.clear();byCode.clear();byId.clear();pairMap.clear();parentsByChild.clear();offspringByParent.clear();
@@ -59,14 +64,13 @@ function initialiseData(csv,jp,meta,breedingData){
   if(!byName.has(p.en))byName.set(p.en,p);
  });
  buildIndexes(breedingData?.Breeding||[]);
- const expected=pals.length*(pals.length+1)/2;
- if(pairMap.size!==expected)throw new Error(`配合表が不完全です: ${pairMap.size}/${expected}組`);
+ validateIndexes();
  fillFilterOptions();
  $("#dataStatus").textContent="ゲームデータ配合表 読込完了";
  $("#dataStatus").className="badge ok";
  $("#dataStatus").style.cursor="default";
  $("#dataStatus").onclick=null;
- $("#palCount").textContent=pals.length+"体";
+ $("#palCount").textContent=pals.length+"形態";
  $("#comboCount").textContent=pairMap.size.toLocaleString()+"組";
  renderAll();
 }
@@ -82,13 +86,13 @@ async function load(){
  }catch(e){
   console.error(e);
   pals=[];byName.clear();byCode.clear();byId.clear();pairMap.clear();parentsByChild.clear();offspringByParent.clear();
-  $("#palCount").textContent="0体";$("#comboCount").textContent="0組";
-  $("#dataStatus").textContent="確定配合表の取得失敗・タップで再試行";
+  $("#palCount").textContent="0形態";$("#comboCount").textContent="0組";
+  $("#dataStatus").textContent="確定配合表の取得・検証失敗　タップで再試行";
   $("#dataStatus").className="badge warn";
   $("#dataStatus").style.cursor="pointer";
   $("#dataStatus").onclick=()=>{$("#dataStatus").onclick=null;load()};
   renderAll();
-  toast("確定配合表を取得できないため、配合結果は表示しません");
+  toast("確定配合表を検証できないため、配合結果は表示しません");
  }
 }
 function buildIndexes(rows){
@@ -101,7 +105,7 @@ function buildIndexes(rows){
   const key=pairKey(first.uid,second.uid);
   if(!pairMap.has(key))pairMap.set(key,[]);
   if(!seenByPair.has(key))seenByPair.set(key,new Set());
-  const sig=[child.uid,row.Parent1Gender,row.Parent2Gender].join("|");
+  const sig=normalizedResultSignature(first,second,child,row.Parent1Gender,row.Parent2Gender);
   if(seenByPair.get(key).has(sig))continue;
   seenByPair.get(key).add(sig);
   const genderSpecific=row.Parent1Gender!=="WILDCARD"||row.Parent2Gender!=="WILDCARD";
@@ -118,10 +122,31 @@ function buildIndexes(rows){
   for(const r of results){
    if(!parentsByChild.has(r.child.uid))parentsByChild.set(r.child.uid,[]);
    parentsByChild.get(r.child.uid).push(r);
-   for(const p of [r.first,r.second]){
+   const uniqueParents=r.first.uid===r.second.uid?[r.first]:[r.first,r.second];
+   for(const p of uniqueParents){
     if(!offspringByParent.has(p.uid))offspringByParent.set(p.uid,[]);
     offspringByParent.get(p.uid).push({...r,partner:p.uid===r.first.uid?r.second:r.first});
    }
   }
+ }
+}
+function validateIndexes(){
+ const expectedPairs=pals.length*(pals.length+1)/2;
+ if(pairMap.size!==expectedPairs)throw new Error(`配合表が不完全です: ${pairMap.size}/${expectedPairs}組`);
+ if(parentsByChild.size!==pals.length)throw new Error(`逆引き表が不完全です: ${parentsByChild.size}/${pals.length}形態`);
+ for(const [key,results] of pairMap){
+  if(!results.length)throw new Error(`結果が空の配合ペアです: ${key}`);
+  const seen=new Set();
+  for(const r of results){
+   const sig=normalizedResultSignature(r.first,r.second,r.child,r.parent1Gender,r.parent2Gender);
+   if(seen.has(sig))throw new Error(`配合結果が重複しています: ${key}`);
+   seen.add(sig);
+  }
+ }
+ for(const parent of pals){
+  let expected=0;
+  for(const partner of pals)expected+=(pairMap.get(pairKey(parent.uid,partner.uid))||[]).length;
+  const actual=(offspringByParent.get(parent.uid)||[]).length;
+  if(actual!==expected)throw new Error(`全子一覧の件数が不正です: ${parent.code} ${actual}/${expected}`);
  }
 }
