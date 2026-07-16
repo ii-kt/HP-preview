@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - "palworld/tools/audit_breeding_sources.py"
+      - "palworld/tools/build_verified_dataset.py"
       - ".github/workflows/palworld-breeding-source-audit.yml"
   push:
     branches: [main]
     paths:
       - "palworld/tools/audit_breeding_sources.py"
+      - "palworld/tools/build_verified_dataset.py"
       - ".github/workflows/palworld-breeding-source-audit.yml"
   schedule:
     - cron: "17 3 * * *"
@@ -24,7 +26,7 @@ concurrency:
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,60 +34,66 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Compile audit program
-        run: python -m py_compile palworld/tools/audit_breeding_sources.py
+      - name: Compile audit programs
+        run: python -m py_compile palworld/tools/audit_breeding_sources.py palworld/tools/build_verified_dataset.py
       - name: Build adversarial audit and consensus
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python palworld/tools/audit_breeding_sources.py
-      - name: Validate generated JSON
+      - name: Build cross-validated calculator dataset
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python palworld/tools/build_verified_dataset.py
+      - name: Validate generated files
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
           report = json.loads(Path('palworld/audit/source-audit.json').read_text(encoding='utf-8'))
           consensus = json.loads(Path('palworld/audit/consensus.json').read_text(encoding='utf-8'))
-          assert report['schemaVersion'] == 4
-          assert report['policy']['failClosed'] is True
-          assert consensus['schemaVersion'] == 2
-          assert consensus['failClosed'] is True
+          pals = json.loads(Path('palworld/data/pals.verified.json').read_text(encoding='utf-8'))['pals']
+          breeding = json.loads(Path('palworld/data/breeding.verified.json').read_text(encoding='utf-8'))['breeding']
+          verification = json.loads(Path('palworld/data/verification.json').read_text(encoding='utf-8'))
+          assert report['schemaVersion'] == 4 and report['policy']['failClosed'] is True
+          assert consensus['schemaVersion'] == 2 and consensus['failClosed'] is True
           assert consensus['pairCount'] == len(consensus['pairs'])
-          assert report['sourcesSummary']['palcalc']['pairCount'] > 0
-          assert report['sourcesSummary']['pst']['resolvedPairCount'] > 0
-          assert report['sourcesSummary']['paldeck']['pairCount'] > 0
-          for key, children in consensus['pairs'].items():
-              assert '|' in key
-              assert children
+          assert verification['palCount'] == len(pals) == 299
+          assert verification['unorderedPairCount'] == 44850
+          assert verification['resultRowCount'] == len(breeding) == 44851
+          assert verification['genderDependentPairs'] == ['catmage|foxmage']
+          ids = {pal['id'] for pal in pals}
+          assert 'worldtreedragon' in ids
+          assert 'plantslime_flower' not in ids
+          assert all(row['parent1'] in ids and row['parent2'] in ids and row['child'] in ids for row in breeding)
+          pair_keys = {'|'.join(sorted((row['parent1'], row['parent2']))) for row in breeding}
+          assert len(pair_keys) == 44850
           print(json.dumps({
-              'sourcePairs': {
-                  'palcalc': report['sourcesSummary']['palcalc']['pairCount'],
-                  'pstResolved': report['sourcesSummary']['pst']['resolvedPairCount'],
-                  'paldeck': report['sourcesSummary']['paldeck']['pairCount'],
-              },
+              'pals': len(pals), 'pairs': len(pair_keys), 'rows': len(breeding),
               'strictConsensusPairs': consensus['pairCount'],
-              'disputedPairs': report['consensus']['disputedPairs'],
-              'partialCoveragePairs': report['consensus']['partialCoveragePairs'],
-              'singleSourcePairs': report['consensus']['singleSourcePairs'],
+              'genderDependentPairs': verification['genderDependentPairs'],
           }, indent=2))
           PY
-      - name: Upload audit evidence
+      - name: Upload audit evidence and dataset
         uses: actions/upload-artifact@v4
         with:
           name: palworld-breeding-audit-${{ github.sha }}
           path: |
             palworld/audit/source-audit.json
             palworld/audit/consensus.json
+            palworld/data/pals.verified.json
+            palworld/data/breeding.verified.json
+            palworld/data/verification.json
           if-no-files-found: error
           retention-days: 30
-      - name: Commit reports on main or schedule
+      - name: Commit generated evidence on main or schedule
         if: github.event_name != 'pull_request'
         run: |
-          if git diff --quiet -- palworld/audit/source-audit.json palworld/audit/consensus.json; then
-            echo "Audit reports unchanged"
+          if git diff --quiet -- palworld/audit/source-audit.json palworld/audit/consensus.json palworld/data/pals.verified.json palworld/data/breeding.verified.json palworld/data/verification.json; then
+            echo "Generated files unchanged"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add palworld/audit/source-audit.json palworld/audit/consensus.json
-          git commit -m "Update Palworld breeding evidence [skip ci]"
+          git add palworld/audit/source-audit.json palworld/audit/consensus.json palworld/data/pals.verified.json palworld/data/breeding.verified.json palworld/data/verification.json
+          git commit -m "Update Palworld breeding evidence and dataset [skip ci]"
           git push
