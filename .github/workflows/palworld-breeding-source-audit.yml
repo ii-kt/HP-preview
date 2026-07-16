@@ -122,12 +122,13 @@ jobs:
       - name: Commit validated calculator dataset
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         run: |
-          if git diff --quiet -- palworld/data/pals.verified.json palworld/data/breeding.verified.json palworld/data/verification.json; then
+          GENERATED_PATHS="palworld/data/pals.verified.json palworld/data/breeding.verified.json palworld/data/verification.json"
+          if [ -z "$(git status --porcelain -- $GENERATED_PATHS)" ]; then
             echo "Validated calculator dataset unchanged"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add palworld/data/pals.verified.json palworld/data/breeding.verified.json palworld/data/verification.json
+          git add $GENERATED_PATHS
           git commit -m "Update validated Palworld breeding dataset [skip ci]"
           git push origin HEAD:${{ github.head_ref || github.ref_name }}
