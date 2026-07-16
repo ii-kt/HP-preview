@@ -5,83 +5,71 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>Palworld 日本語配合計算機 1.0</title>
-<link rel="stylesheet" href="styles.css?v=20260716-auditfix2">
+<link rel="stylesheet" href="styles.css?v=20260716-auditblocked1">
+<style>
+.audit-stop{margin:0 0 14px;padding:14px 16px;border:1px solid #a6485c;border-radius:14px;background:#35151ded;color:#ffdce3;line-height:1.7}.audit-stop strong{display:block;margin-bottom:4px;color:#ff9caf}.tabs button:disabled{cursor:not-allowed;opacity:.42}.breeding-stopped{display:none!important}
+</style>
 </head>
 <body>
 <div class="app">
 <header class="hero">
  <div>
   <h1>Palworld 日本語配合計算機</h1>
-  <p class="sub">親から子、子から親、全子候補、4世代の配合系譜を日本語で検索できます。ゲームバージョン 1.0対応データ。</p>
+  <p class="sub">再監査で配合データの大規模な不一致が判明したため、配合機能を停止しています。パル一覧のみ閲覧できます。</p>
  </div>
  <div class="status">
-  <span id="dataStatus" class="badge warn">確定配合表を読込中</span>
+  <span id="dataStatus" class="badge warn">再監査不合格・配合機能停止中</span>
   <span id="palCount" class="badge">0形態</span>
-  <span id="comboCount" class="badge">0組</span>
+  <span id="comboCount" class="badge">停止中</span>
  </div>
 </header>
+<section class="audit-stop" role="alert">
+ <strong>配合結果は現在利用できません</strong>
+ 現行GenshinLabの配合表と照合した結果、比較可能な44,551組のうち20,480組で子パルが一致しませんでした。誤った配合案内を防ぐため、親→子、子→親、全子一覧、配合ツリーを停止しています。
+</section>
 <section class="howto" aria-label="選択中機能の使い方" aria-live="polite">
-  <div><b>1</b><span>「親Aを選択」を押す</span></div>
-  <div><b>2</b><span>「親Bを選択」を押す</span></div>
-  <div><b>3</b><span>子パルが表示される（性別依存は条件別）</span></div>
+  <div><b>1</b><span>名前・図鑑番号を入力する</span></div>
+  <div><b>2</b><span>属性・作業適性などで絞り込む</span></div>
+  <div><b>3</b><span>一覧からパル情報を確認する</span></div>
 </section>
 
 <nav class="tabs" id="tabs">
- <button data-tab="parents" class="active">親2体 → 子</button>
- <button data-tab="target">子 → 親候補</button>
- <button data-tab="offspring">親1体 → 全ての子</button>
- <button data-tab="tree">4世代 配合ツリー</button>
- <button data-tab="dex">パル一覧</button>
+ <button data-tab="parents" disabled>親2体 → 子（停止中）</button>
+ <button data-tab="target" disabled>子 → 親候補（停止中）</button>
+ <button data-tab="offspring" disabled>親1体 → 全ての子（停止中）</button>
+ <button data-tab="tree" disabled>4世代 配合ツリー（停止中）</button>
+ <button data-tab="dex" class="active">パル一覧</button>
 </nav>
 
 <main>
-<section id="view-parents" class="view panel">
- <div class="panel-title"><h2>親を2体選択</h2><small>ゲームデータ確定表・性別依存対応</small></div>
- <div class="equation">
-  <button class="slot" id="parentA"></button><div class="op">＋</div>
-  <button class="slot" id="parentB"></button><div class="op">＝</div>
-  <div class="slot" id="childSlot"></div>
- </div>
- <div class="actions">
-  <button class="action" id="swapParents">入れ替え</button>
-  <button class="action danger" id="clearParents">クリア</button>
-  <button class="action" id="copyParents">結果をコピー</button>
- </div>
+<section id="view-parents" class="view panel breeding-stopped" hidden>
+ <div class="panel-title"><h2>親を2体選択</h2></div>
+ <div class="equation"><button class="slot" id="parentA"></button><div class="op">＋</div><button class="slot" id="parentB"></button><div class="op">＝</div><div class="slot" id="childSlot"></div></div>
+ <div class="actions"><button class="action" id="swapParents">入れ替え</button><button class="action danger" id="clearParents">クリア</button><button class="action" id="copyParents">結果をコピー</button></div>
  <div id="parentResults" class="results" style="margin-top:12px"></div>
 </section>
 
-<section id="view-target" class="view panel" hidden>
+<section id="view-target" class="view panel breeding-stopped" hidden>
  <div class="panel-title"><h2>作りたいパルから親を逆引き</h2><small id="targetCount"></small></div>
  <div class="control-grid"><button id="targetPick" class="pick-button"></button></div>
- <div class="list-toolbar">
-  <input id="targetFilter" placeholder="親の日本語名・英語名・図鑑番号で絞り込み">
-  <select id="targetSort"><option value="no">図鑑番号順</option><option value="name">日本語名順</option><option value="power">配合値順</option></select>
- </div>
+ <div class="list-toolbar"><input id="targetFilter" placeholder="親の日本語名・英語名・図鑑番号で絞り込み"><select id="targetSort"><option value="no">図鑑番号順</option><option value="name">日本語名順</option><option value="power">配合値順</option></select></div>
  <div id="targetResults" class="results"></div>
 </section>
 
-<section id="view-offspring" class="view panel" hidden>
+<section id="view-offspring" class="view panel breeding-stopped" hidden>
  <div class="panel-title"><h2>1体の親から作れる子を一覧表示</h2><small id="offspringCount"></small></div>
  <div class="control-grid"><button id="singleParentPick" class="pick-button"></button></div>
- <div class="list-toolbar">
-  <input id="offspringFilter" placeholder="相手または子の名前・番号で絞り込み">
-  <select id="offspringSort"><option value="child">子の図鑑番号順</option><option value="partner">相手の図鑑番号順</option><option value="name">子の日本語名順</option></select>
- </div>
+ <div class="list-toolbar"><input id="offspringFilter" placeholder="相手または子の名前・番号で絞り込み"><select id="offspringSort"><option value="child">子の図鑑番号順</option><option value="partner">相手の図鑑番号順</option><option value="name">子の日本語名順</option></select></div>
  <div id="offspringResults" class="results"></div>
 </section>
 
-<section id="view-tree" class="view panel" hidden>
- <div class="panel-title"><h2>4世代 配合系譜</h2><small>ドラッグ移動・ホイール／ピンチ拡大</small></div>
- <div class="tree-toolbar">
-  <div class="seg"><button data-orient="result" class="active">結果起点</button><button data-orient="parent">親起点</button></div>
-  <button id="treePick" class="action primary">起点パルを選択</button>
-  <label>世代 <select id="treeDepth" class="field"><option>1</option><option>2</option><option>3</option><option selected>4</option></select></label>
-  <button id="zoomOut" class="action">－</button><button id="zoomReset" class="action">100%</button><button id="zoomIn" class="action">＋</button>
- </div>
+<section id="view-tree" class="view panel breeding-stopped" hidden>
+ <div class="panel-title"><h2>4世代 配合系譜</h2></div>
+ <div class="tree-toolbar"><div class="seg"><button data-orient="result" class="active">結果起点</button><button data-orient="parent">親起点</button></div><button id="treePick" class="action primary">起点パルを選択</button><label>世代 <select id="treeDepth" class="field"><option>1</option><option>2</option><option>3</option><option selected>4</option></select></label><button id="zoomOut" class="action">－</button><button id="zoomReset" class="action">100%</button><button id="zoomIn" class="action">＋</button></div>
  <div class="tree-viewport" id="treeViewport"><div id="treeCanvas" class="tree-canvas"></div></div>
 </section>
 
-<section id="view-dex" class="view panel" hidden>
+<section id="view-dex" class="view panel">
  <div class="panel-title"><h2>パル一覧</h2><small id="dexCount"></small></div>
  <div class="list-toolbar">
   <input id="dexSearch" placeholder="日本語名・英語名・図鑑番号で検索">
@@ -95,10 +83,9 @@
 </section>
 
 <details class="info-box info">
- <summary>データと検証方法</summary>
- <p>配合結果は平均値から推測せず、PalCalcがPalworld 1.0のゲームデータから生成した全配合表をそのまま参照します。図鑑対象287パルに花付きナエモチを別形態として加えた288形態について、全41,616ペアが揃っているか検査します。</p>
- <p>配合結果、逆引き表、親1体からの全子一覧を相互検証し、欠落・重複・不正な性別条件が1件でもあれば配合機能を停止します。性別によって結果が変わる組合せは、代表1体ではなく条件別の全結果を表示します。</p>
- <p>配合表：<a href="https://github.com/tylercamp/palcalc/blob/8b7e2f779e47fddae16ddcb973e828ba20c02b80/PalCalc.Model/breeding.json" target="_blank" rel="noreferrer">PalCalc breeding.json</a>。パル画像：<a href="https://github.com/tylercamp/palcalc/tree/8b7e2f779e47fddae16ddcb973e828ba20c02b80/PalCalc.UI/Resources/Pals" target="_blank" rel="noreferrer">PalCalc Resources/Pals</a>（MIT License）。</p>
+ <summary>再監査結果</summary>
+ <p>従来版が参照したPalCalc表は内部では整合していましたが、ターゲットであるGenshinLabの現行1.0配合表とは対象形態と配合結果の両方が一致しませんでした。</p>
+ <p>修正版ではGenshinLabの現行manifestとbreeding_lookupを基準に全組合せを再構築し、別データ源・既知例・ブラウザ操作を含む再検証が完了するまで配合機能を再開しません。</p>
 </details>
 </main>
 </div>
@@ -106,21 +93,28 @@
 <div class="modal" id="pickerModal">
  <div class="dialog" role="dialog" aria-modal="true" aria-label="パルを選択">
   <div class="dialog-head"><input id="pickerSearch" placeholder="日本語名・英語名・図鑑番号"><button id="pickerClose">閉じる</button></div>
-  <div class="filters">
-   <select id="pickerSort"><option value="asc">図鑑番号 昇順</option><option value="desc">図鑑番号 降順</option><option value="jp">日本語名順</option></select>
-   <select id="pickerVariant"><option value="all">すべて</option><option value="base">通常種</option><option value="variant">亜種</option></select>
-   <select id="pickerElement"><option value="">全属性</option></select>
-   <select id="pickerWork"><option value="">全作業</option></select>
-   <select id="pickerLevel"><option value="0">作業Lv指定なし</option><option value="1">Lv.1+</option><option value="2">Lv.2+</option><option value="3">Lv.3+</option><option value="4">Lv.4+</option><option value="5">Lv.5+</option></select>
-  </div>
+  <div class="filters"><select id="pickerSort"><option value="asc">図鑑番号 昇順</option><option value="desc">図鑑番号 降順</option><option value="jp">日本語名順</option></select><select id="pickerVariant"><option value="all">すべて</option><option value="base">通常種</option><option value="variant">亜種</option></select><select id="pickerElement"><option value="">全属性</option></select><select id="pickerWork"><option value="">全作業</option></select><select id="pickerLevel"><option value="0">作業Lv指定なし</option><option value="1">Lv.1+</option><option value="2">Lv.2+</option><option value="3">Lv.3+</option><option value="4">Lv.4+</option><option value="5">Lv.5+</option></select></div>
   <div id="pickerList" class="picker-list"></div>
  </div>
 </div>
 <div id="toast" class="toast"></div>
 
-<script src="data.js?v=20260716-auditfix2" defer></script>
-<script src="render.js?v=20260716-auditfix2" defer></script>
-<script src="picker-tree.js?v=20260716-auditfix2" defer></script>
-<script src="events.js?v=20260716-auditfix2" defer></script>
+<script src="data.js?v=20260716-auditblocked1" defer></script>
+<script src="render.js?v=20260716-auditblocked1" defer></script>
+<script src="picker-tree.js?v=20260716-auditblocked1" defer></script>
+<script src="events.js?v=20260716-auditblocked1" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+ const status=document.getElementById('dataStatus');
+ const combos=document.getElementById('comboCount');
+ const enforce=()=>{
+  if(status&&status.textContent!=='再監査不合格・配合機能停止中'){status.textContent='再監査不合格・配合機能停止中';status.className='badge warn'}
+  if(combos&&combos.textContent!=='停止中')combos.textContent='停止中';
+  if(typeof updateHowto==='function')updateHowto('dex');
+ };
+ enforce();
+ if(status)new MutationObserver(enforce).observe(status,{childList:true,subtree:true});
+});
+</script>
 </body>
 </html>
