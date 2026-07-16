@@ -1,6 +1,10 @@
+const PAL_ICON_BASE="https://raw.githubusercontent.com/tylercamp/palcalc/8b7e2f779e47fddae16ddcb973e828ba20c02b80/PalCalc.UI/Resources/Pals/";
 function initials(p){return (p.jp||p.en).replace(/[（）()・\s]/g,"").slice(0,2)}
-function colors(p){const h=(p.no*37+p.index*13)%360;return [`hsl(${h} 55% 34%)`,`hsl(${(h+55)%360} 58% 42%)`]}
-function mark(p,sm=false){if(!p)return `<div class="palmark ${sm?"sm":""}">?</div>`;const [a,b]=colors(p);return `<div class="palmark ${sm?"sm":""}" style="--c1:${a};--c2:${b}">${esc(initials(p))}</div>`}
+function iconUrl(p){return PAL_ICON_BASE+encodeURIComponent(p.en)+".png"}
+function mark(p,sm=false){
+ if(!p)return `<span class="palmark ${sm?"sm":""} placeholder"><span class="palmark-fallback">?</span></span>`;
+ return `<span class="palmark ${sm?"sm":""}"><img src="${esc(iconUrl(p))}" alt="${esc(p.jp)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="palmark-fallback" hidden>${esc(initials(p))}</span></span>`;
+}
 function palHTML(p,sm=true){return `<div class="pal-inline">${mark(p,sm)}<div style="min-width:0"><strong>${esc(p.jp)}</strong><div class="enname">${esc(p.en)} · No.${String(p.no).padStart(3,"0")}${p.variant?"B":""}</div></div></div>`}
 function slotHTML(p,label){
  return p?`${mark(p)}<div class="jpname">${esc(p.jp)}</div><div class="enname">${esc(p.en)}</div><div class="no">No.${String(p.no).padStart(3,"0")}${p.variant?"B":""}　配合値 ${p.power}</div>`
